@@ -521,6 +521,7 @@ export default function App() {
                   <QuizRoom
                       roomId={activeRoom.id}
                       isHost={activeRoom.isHost}
+                      playerName={playerName}
                       onStartQuiz={loadQuestionsAndStart}
                   />
                 </Box>
