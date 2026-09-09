@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "difficulty": "easy",
+    "question": "Wie hieß die Schwiegertochter von Noomi?",
+    "options": ["Rut", "Orpa", "Rahab", "Susanna"],
+    "correctAnswer": 0
+  },
+  {
+    "id": 2,
+    "difficulty": "medium",
+    "question": "Welches Buch des Alten Testaments steht direkt vor dem Buch Rut?",
+    "options": ["1. Mose (Genesis)", "Richter", "Josua", "1. Samuel"],
+    "correctAnswer": 1
+  }
+]

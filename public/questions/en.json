@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "difficulty": "easy",
+    "question": "What was the name of Naomi's daughter-in-law?",
+    "options": ["Ruth", "Orpah", "Rahab", "Susanna"],
+    "correctAnswer": 0
+  },
+  {
+    "id": 2,
+    "difficulty": "medium",
+    "question": "Which Old Testament book comes before Ruth?",
+    "options": ["Genesis", "Judges", "Joshua", "1 Samuel"],
+    "correctAnswer": 1
+  }
+]
