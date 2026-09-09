@@ -104,8 +104,7 @@ const uiTranslations = {
     shareWithPlayers: 'Μοιράσου με τους παίκτες:',
     pin: 'PIN',
     shareLink: 'Κοινοποίηση συνδέσμου',
-    leaveLobby: 'Έξοδος',
-    activeSessions: 'Ενεργά Δωμάτια / Συνεδρίες'
+    leaveLobby: 'Έξοδος'
   },
 
   en: {
@@ -134,8 +133,7 @@ const uiTranslations = {
     shareWithPlayers: 'Share with players:',
     pin: 'PIN',
     shareLink: 'Share Link',
-    leaveLobby: 'Leave',
-    activeSessions: 'Active Rooms / Sessions'
+    leaveLobby: 'Leave'
   },
 
   de: {
@@ -149,7 +147,7 @@ const uiTranslations = {
     joinRoom: 'Raum beitreten',
     soloMode: 'Einzelspieler',
     multiMode: 'Mehrspieler',
-    raumName: 'Raumname',
+    roomName: 'Raumname',
     password: 'PIN / Passwort',
     maxPlayers: 'Max. Spieler',
     enterName: 'Dein Name',
@@ -164,8 +162,7 @@ const uiTranslations = {
     shareWithPlayers: 'Mit Spielern teilen:',
     pin: 'PIN',
     shareLink: 'Link teilen',
-    leaveLobby: 'Verlassen',
-    activeSessions: 'Aktive Räume / Sitzungen'
+    leaveLobby: 'Verlassen'
   }
 };
 
@@ -179,14 +176,11 @@ export default function App() {
     difficulty: 'easy'
   });
 
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('bible_quiz_player_name') || '');
+  const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
-  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean } | null>(() => {
-    const saved = localStorage.getItem('bible_quiz_active_room');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean } | null>(null);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -195,22 +189,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // Sync active room and player name to localStorage
-  useEffect(() => {
-    if (activeRoom) {
-      localStorage.setItem('bible_quiz_active_room', JSON.stringify(activeRoom));
-      setAppState('lobby');
-    } else {
-      localStorage.removeItem('bible_quiz_active_room');
-    }
-  }, [activeRoom]);
-
-  useEffect(() => {
-    if (playerName) {
-      localStorage.setItem('bible_quiz_player_name', playerName);
-    }
-  }, [playerName]);
 
   useEffect(() => {
     document.body.style.backgroundImage = appState === 'quiz'
@@ -229,6 +207,7 @@ export default function App() {
       setPlayMode('multiplayer');
       setMultiAction('join');
 
+      // Automatically focus the name input field after mount
       setTimeout(() => {
         nameInputRef.current?.focus();
       }, 100);
@@ -278,14 +257,13 @@ export default function App() {
 
       if (dbError) throw dbError;
 
-      const newRoom = {
+      setActiveRoom({
         id: data.id,
         code: generatedRoomName,
         pass: generatedPin,
         isHost: true
-      };
+      });
 
-      setActiveRoom(newRoom);
       setAppState('lobby');
     } catch (err) {
       setError(
@@ -297,15 +275,12 @@ export default function App() {
     }
   };
 
-  const handleJoinRoom = async (roomCodeToJoin?: string, passwordToJoin?: string) => {
-    const targetCode = roomCodeToJoin || inputRoomCode;
-    const targetPass = passwordToJoin || inputPassword;
-
+  const handleJoinRoom = async () => {
     if (!playerName.trim()) {
       setError('Please enter your name.');
       return;
     }
-    if (!targetCode.trim() || !targetPass.trim()) {
+    if (!inputRoomCode.trim() || !inputPassword.trim()) {
       setError('Please enter your name, room code, and password.');
       return;
     }
@@ -317,15 +292,15 @@ export default function App() {
       const { data, error: dbError } = await supabase
           .from('room')
           .select('*')
-          .eq('password', targetPass.trim().toUpperCase());
+          .eq('password', inputPassword.trim().toUpperCase());
 
       if (dbError || !data || data.length === 0) {
         throw new Error('Invalid room code or password.');
       }
 
       const matchedRoom = data.find(
-          (r) => r.room_code.trim().localeCompare(targetCode.trim(), 'el', { sensitivity: 'accent' }) === 0 ||
-              r.room_code.trim() === targetCode.trim()
+          (r) => r.room_code.trim().localeCompare(inputRoomCode.trim(), 'el', { sensitivity: 'accent' }) === 0 ||
+              r.room_code.trim() === inputRoomCode.trim()
       );
 
       if (!matchedRoom) {
@@ -338,14 +313,12 @@ export default function App() {
         difficulty: matchedRoom.difficulty || prev.difficulty
       }));
 
-      const joinedRoom = {
+      setActiveRoom({
         id: matchedRoom.id,
         code: matchedRoom.room_code,
         pass: matchedRoom.password,
-        isHost: matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase()
-      };
-
-      setActiveRoom(joinedRoom);
+        isHost: false
+      });
       setAppState('lobby');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not join room.');
@@ -414,8 +387,8 @@ export default function App() {
 
   const handleLeaveLobby = () => {
     setActiveRoom(null);
-    localStorage.removeItem('bible_quiz_active_room');
     setAppState('setup');
+    // Clear query params if desired
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
@@ -559,7 +532,7 @@ export default function App() {
                                   value={inputPassword}
                                   onChange={(e) => setInputPassword(e.target.value.toUpperCase())}
                               />
-                              <Button variant="contained" size="large" fullWidth onClick={() => handleJoinRoom()} sx={{ mt: 1 }}>
+                              <Button variant="contained" size="large" fullWidth onClick={handleJoinRoom} sx={{ mt: 1 }}>
                                 {t.joinRoom}
                               </Button>
                             </>
@@ -701,11 +674,7 @@ export default function App() {
                   <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
                     {t.score} {score} / {activeQuestions.length}
                   </Typography>
-                  <Button variant="contained" onClick={() => {
-                    setActiveRoom(null);
-                    localStorage.removeItem('bible_quiz_active_room');
-                    setAppState('setup');
-                  }}>
+                  <Button variant="contained" onClick={() => setAppState('setup')}>
                     {t.restart}
                   </Button>
                 </Box>
