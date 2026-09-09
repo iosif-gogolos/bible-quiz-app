@@ -11,29 +11,84 @@ import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
 
-const generate4CharKey = (): string => {
+const generatePin = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
+
   for (let i = 0; i < 4; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+
   return result;
+};
+
+const biblicalCities = {
+  el: [
+    'Ιερουσαλήμ',
+    'Βηθλεέμ',
+    'Ναζαρέτ',
+    'Καπερναούμ',
+    'Βηθανία',
+    'Ιεριχώ',
+    'Κανά',
+    'Αντιόχεια',
+    'Έφεσος',
+    'Κόρινθος',
+    'Φίλιπποι',
+    'Θεσσαλονίκη',
+    'Aθήνα'
+  ],
+  en: [
+    'Jerusalem',
+    'Bethlehem',
+    'Nazareth',
+    'Capernaum',
+    'Bethany',
+    'Jericho',
+    'Cana',
+    'Antioch',
+    'Ephesus',
+    'Corinth',
+    'Philippi',
+    'Thessalonica',
+      'Athens'
+  ],
+  de: [
+    'Jerusalem',
+    'Bethlehem',
+    'Nazareth',
+    'Kapernaum',
+    'Bethanien',
+    'Jericho',
+    'Kana',
+    'Antiochia',
+    'Ephesus',
+    'Korinth',
+    'Philippi',
+    'Thessalonich',
+      'Athen'
+  ]
+} as const;
+
+const getRandomBiblicalCity = (language: Language): string => {
+  const cities = biblicalCities[language];
+  return cities[Math.floor(Math.random() * cities.length)];
 };
 
 const uiTranslations = {
   el: {
-    title: 'Βιβλικο Κουιζ',
+    title: 'Βιβλικό Κουίζ',
     difficultyLabel: 'Βαθμός δυσκολίας',
     easy: 'Εύκολο (π.χ. για Κυριακό)',
-    medium: 'Μέτριο (π.χ. για Εφοιβικό)',
+    medium: 'Μέτριο (π.χ. για Εφηβικό)',
     hard: 'Δύσκολο (π.χ. για Νεολαία και Μεγάλους)',
     start: 'Έναρξη',
     createRoom: 'Δημιουργία Δωματίου',
     joinRoom: 'Σύνδεση σε Δωμάτιο',
     soloMode: 'Μονός Παίκτης',
     multiMode: 'Πολλαπλοί Παίκτες',
-    roomCode: 'Όνομα Δωματίου',
-    password: 'PIN / Password',
+    roomName: 'Όνομα Δωματίου',
+    password: 'PIN / Κωδικός',
     maxPlayers: 'Μέγιστος Αριθμός Παικτών',
     enterName: 'Το όνομά σου',
     question: 'Ερώτηση',
@@ -42,8 +97,12 @@ const uiTranslations = {
     next: 'Επόμενη Ερώτηση',
     completed: 'Ολοκληρώθηκε!',
     score: 'Το σκορ σου:',
-    restart: 'Πίσω στην αρχική σελίδα'
+    restart: 'Πίσω στην αρχική σελίδα',
+    quizLobby: 'Λόμπι Κουίζ',
+    shareWithPlayers: 'Μοιράσου με τους παίκτες:',
+    pin: 'PIN'
   },
+
   en: {
     title: 'Bible Quiz',
     difficultyLabel: 'Difficulty',
@@ -55,7 +114,7 @@ const uiTranslations = {
     joinRoom: 'Join Room',
     soloMode: 'Single Player',
     multiMode: 'Multiplayer',
-    roomCode: 'Room Name',
+    roomName: 'Room Name',
     password: 'PIN / Password',
     maxPlayers: 'Max Players',
     enterName: 'Your Nickname',
@@ -65,30 +124,37 @@ const uiTranslations = {
     next: 'Next Question',
     completed: 'Quiz Completed!',
     score: 'Your Score:',
-    restart: 'Back to home screen'
+    restart: 'Back to home screen',
+    quizLobby: 'Quiz Lobby',
+    shareWithPlayers: 'Share with players:',
+    pin: 'PIN'
   },
+
   de: {
     title: 'Bibel-Quiz',
     difficultyLabel: 'Schwierigkeit',
     easy: 'Einfach',
     medium: 'Mittel',
     hard: 'Schwer',
-    start: 'Einzelspieler Starten',
-    createRoom: 'Raum Erstellen',
-    joinRoom: 'Raum Beitreten',
+    start: 'Einzelspieler starten',
+    createRoom: 'Raum erstellen',
+    joinRoom: 'Raum beitreten',
     soloMode: 'Einzelspieler',
     multiMode: 'Mehrspieler',
-    roomCode: 'Raum-Name',
+    roomName: 'Raumname',
     password: 'PIN / Passwort',
     maxPlayers: 'Max. Spieler',
     enterName: 'Dein Name',
     question: 'Frage',
     of: 'von',
-    finish: 'Quiz Beenden',
+    finish: 'Quiz beenden',
     next: 'Nächste Frage',
-    completed: 'Quiz Beendet!',
+    completed: 'Quiz beendet!',
     score: 'Dein Ergebnis:',
-    restart: 'Zurück zum Startbildschirm'
+    restart: 'Zurück zum Startbildschirm',
+    quizLobby: 'Quiz-Lobby',
+    shareWithPlayers: 'Mit Spielern teilen:',
+    pin: 'PIN'
   }
 };
 
@@ -140,16 +206,16 @@ export default function App() {
     setAppState('loading');
     setError(null);
 
-    const generatedCode = generate4CharKey();
-    const generatedPass = generate4CharKey();
+    const generatedRoomName = getRandomBiblicalCity(settings.language);
+    const generatedPin = generatePin();
 
     try {
       const { data, error: dbError } = await supabase
           .from('room')
           .insert([
             {
-              room_code: generatedCode,
-              password: generatedPass,
+              room_code: generatedRoomName,
+              password: generatedPin,
               host_id: playerName.trim(),
               max_players: maxPlayers,
               language: settings.language,
@@ -164,13 +230,18 @@ export default function App() {
 
       setActiveRoom({
         id: data.id,
-        code: generatedCode,
-        pass: generatedPass,
+        code: generatedRoomName,
+        pass: generatedPin,
         isHost: true
       });
+
       setAppState('lobby');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create room.');
+      setError(
+          err instanceof Error
+              ? err.message
+              : 'Failed to create room.'
+      );
       setAppState('setup');
     }
   };
@@ -368,16 +439,21 @@ export default function App() {
                         ) : (
                             <>
                               <TextField
-                                  label={t.roomCode}
+                                  label={t.roomName}
                                   fullWidth
-                                  slotProps={{ htmlInput: { maxLength: 4 } }}
                                   value={inputRoomCode}
-                                  onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
+                                  onChange={(e) => setInputRoomCode(e.target.value)}
                               />
+
                               <TextField
                                   label={t.password}
                                   fullWidth
-                                  slotProps={{ htmlInput: { maxLength: 4 } }}
+                                  slotProps={{
+                                    htmlInput: {
+                                      maxLength: 4,
+                                      style: { textTransform: 'uppercase' }
+                                    }
+                                  }}
                                   value={inputPassword}
                                   onChange={(e) => setInputPassword(e.target.value.toUpperCase())}
                               />
@@ -392,16 +468,53 @@ export default function App() {
             )}
 
             {appState === 'lobby' && activeRoom && (
-                <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Quiz Lobby</Typography>
+                <Box
+                    sx={{
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2
+                    }}
+                >
+                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                    {t.quizLobby}
+                  </Typography>
 
-                  <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Share with players:</Typography>
-                    <Typography variant="h6" sx={{ letterSpacing: 2, mt: 1 }}>
-                      ROOM CODE: <strong>{activeRoom.code}</strong>
+                  <Paper
+                      elevation={2}
+                      sx={{
+                        p: 2,
+                        bgcolor: '#f5f5f5',
+                        borderRadius: 2
+                      }}
+                  >
+                    <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                    >
+                      {t.shareWithPlayers}
                     </Typography>
-                    <Typography variant="h6" sx={{ letterSpacing: 2 }}>
-                      PIN: <strong>{activeRoom.pass}</strong>
+
+                    <Typography
+                        variant="h6"
+                        sx={{
+                          letterSpacing: 2,
+                          mt: 1,
+                          textTransform: 'none'
+                        }}
+                    >
+                      {t.roomName}:{' '}
+                      <strong>{activeRoom.code}</strong>
+                    </Typography>
+
+                    <Typography
+                        variant="h6"
+                        sx={{
+                          letterSpacing: 2
+                        }}
+                    >
+                      {t.pin}:{' '}
+                      <strong>{activeRoom.pass}</strong>
                     </Typography>
                   </Paper>
 
