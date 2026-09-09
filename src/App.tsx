@@ -9,10 +9,10 @@ import {
 } from '@mui/material';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
+import { QuizRoom } from './QuizRoom';
 
-// Helper function to generate 4-character random code/password
 const generate4CharKey = (): string => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluded confusing chars like O, 0, I, 1
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
   for (let i = 0; i < 4; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -102,12 +102,11 @@ export default function App() {
     difficulty: 'easy'
   });
 
-  // Multiplayer States
   const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
-  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string } | null>(null);
+  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean } | null>(null);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -121,7 +120,6 @@ export default function App() {
         : 'url("/bg-launch-screen.png")';
   }, [appState]);
 
-  // Language Dropdown Menu State
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
 
@@ -133,7 +131,6 @@ export default function App() {
     handleCloseMenu();
   };
 
-  // Create Multiplayer Session in Supabase
   const handleCreateRoom = async () => {
     if (!playerName.trim()) {
       setError('Please enter your name.');
@@ -153,6 +150,7 @@ export default function App() {
             {
               room_code: generatedCode,
               password: generatedPass,
+              host_id: playerName.trim(),
               max_players: maxPlayers,
               language: settings.language,
               difficulty: settings.difficulty,
@@ -167,7 +165,8 @@ export default function App() {
       setActiveRoom({
         id: data.id,
         code: generatedCode,
-        pass: generatedPass
+        pass: generatedPass,
+        isHost: true
       });
       setAppState('lobby');
     } catch (err) {
@@ -176,7 +175,6 @@ export default function App() {
     }
   };
 
-  // Join Existing Room in Supabase
   const handleJoinRoom = async () => {
     if (!playerName.trim() || !inputRoomCode.trim() || !inputPassword.trim()) {
       setError('Please enter your name, room code, and password.');
@@ -198,10 +196,17 @@ export default function App() {
         throw new Error('Invalid room code or password.');
       }
 
+      setSettings(prev => ({
+        ...prev,
+        language: data.language || prev.language,
+        difficulty: data.difficulty || prev.difficulty
+      }));
+
       setActiveRoom({
         id: data.id,
         code: data.room_code,
-        pass: data.password
+        pass: data.password,
+        isHost: false
       });
       setAppState('lobby');
     } catch (err) {
@@ -210,11 +215,7 @@ export default function App() {
     }
   };
 
-  // Start Solo Quiz
-  const handleStartSoloQuiz = async () => {
-    setAppState('loading');
-    setError(null);
-
+  const loadQuestionsAndStart = async () => {
     try {
       const response = await fetch(`/questions/${settings.language}.json`);
       if (!response.ok) throw new Error('Failed to load questions.');
@@ -231,6 +232,12 @@ export default function App() {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setAppState('setup');
     }
+  };
+
+  const handleStartSoloQuiz = async () => {
+    setAppState('loading');
+    setError(null);
+    await loadQuestionsAndStart();
   };
 
   const handleNext = () => {
@@ -251,7 +258,6 @@ export default function App() {
 
   return (
       <Container maxWidth="sm" sx={{ mt: 4, position: 'relative' }}>
-        {/* LANGUAGE SELECTOR */}
         <Box sx={{ position: 'absolute', top: -16, right: 16, zIndex: 10 }}>
           <IconButton
               onClick={handleOpenMenu}
@@ -283,7 +289,6 @@ export default function App() {
 
                   {error && <Typography color="error" align="center">{error}</Typography>}
 
-                  {/* TOGGLE SOLO OR MULTIPLAYER */}
                   <ToggleButtonGroup
                       value={playMode}
                       exclusive
@@ -294,7 +299,6 @@ export default function App() {
                     <ToggleButton value="multiplayer">{t.multiMode}</ToggleButton>
                   </ToggleButtonGroup>
 
-                  {/* SOLO SETUP */}
                   {playMode === 'solo' && (
                       <>
                         <FormControl fullWidth>
@@ -315,7 +319,6 @@ export default function App() {
                       </>
                   )}
 
-                  {/* MULTIPLAYER SETUP */}
                   {playMode === 'multiplayer' && (
                       <>
                         <ToggleButtonGroup
@@ -388,7 +391,6 @@ export default function App() {
                 </Box>
             )}
 
-            {/* LOBBY SCREEN SHOWING ROOM CODE & PASSWORD */}
             {appState === 'lobby' && activeRoom && (
                 <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Quiz Lobby</Typography>
@@ -403,9 +405,11 @@ export default function App() {
                     </Typography>
                   </Paper>
 
-                  <Typography variant="body2" color="text.secondary">
-                    Waiting for host to launch the quiz...
-                  </Typography>
+                  <QuizRoom
+                      roomId={activeRoom.id}
+                      isHost={activeRoom.isHost}
+                      onStartQuiz={loadQuestionsAndStart}
+                  />
                 </Box>
             )}
 
