@@ -148,7 +148,7 @@ export default function App() {
 
     try {
       const { data, error: dbError } = await supabase
-          .from('rooms')
+          .from('room')
           .insert([
             {
               room_code: generatedCode,
