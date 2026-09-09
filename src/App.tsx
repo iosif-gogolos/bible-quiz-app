@@ -104,7 +104,7 @@ const uiTranslations = {
     shareWithPlayers: 'Μοιράσου με τους παίκτες:',
     pin: 'PIN',
     shareLink: 'Κοινοποίηση συνδέσμου',
-    leaveLobby: 'Έξοδος από το δωμάτιο'
+    leaveLobby: 'Έξοδος'
   },
 
   en: {
@@ -133,7 +133,7 @@ const uiTranslations = {
     shareWithPlayers: 'Share with players:',
     pin: 'PIN',
     shareLink: 'Share Link',
-    leaveLobby: 'Leave Room'
+    leaveLobby: 'Leave'
   },
 
   de: {
@@ -162,7 +162,7 @@ const uiTranslations = {
     shareWithPlayers: 'Mit Spielern teilen:',
     pin: 'PIN',
     shareLink: 'Link teilen',
-    leaveLobby: 'Raum verlassen'
+    leaveLobby: 'Verlassen'
   }
 };
 
@@ -551,16 +551,16 @@ export default function App() {
                       gap: 2
                     }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Button
                         startIcon={<ArrowBackIcon />}
                         onClick={handleLeaveLobby}
                         size="small"
-                        sx={{ position: 'absolute', left: 0 }}
+                        variant="outlined"
                     >
                       {t.leaveLobby}
                     </Button>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', width: '100%' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', flexGrow: 1, textAlign: 'center', pr: 8 }}>
                       {t.quizLobby}
                     </Typography>
                   </Box>
