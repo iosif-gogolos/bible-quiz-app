@@ -24,7 +24,7 @@ const uiTranslations = {
     next: 'Επόμενη Ερώτηση',
     completed: 'Ολοκληρώθηκε!',
     score: 'Το σκορ σου:',
-    restart: 'Πίσω στις Ρυθμίσεις'
+    restart: 'Πίσω στην αρχική σελίδα'
   },
   en: {
     title: 'Bible Quiz',
@@ -39,7 +39,7 @@ const uiTranslations = {
     next: 'Next Question',
     completed: 'Quiz Completed!',
     score: 'Your Score:',
-    restart: 'Back to Settings'
+    restart: 'Back to home screen'
   },
   de: {
     title: 'Bibel-Quiz',
@@ -54,7 +54,7 @@ const uiTranslations = {
     next: 'Nächste Frage',
     completed: 'Quiz Beendet!',
     score: 'Dein Ergebnis:',
-    restart: 'Zurück zu den Einstellungen'
+    restart: 'Zurück zum Startbildschirm'
   }
 };
 
