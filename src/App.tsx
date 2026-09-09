@@ -13,7 +13,7 @@ import type { QuizSettings, Language, Difficulty, Question } from './types';
 const uiTranslations = {
   el: {
     title: 'Βιβλικο Κουιζ',
-    difficultyLabel: 'Βαθμό δυσκολίας',
+    difficultyLabel: 'Βαθμός δυσκολίας',
     easy: 'Εύκολο (π.χ. για Κυριακό)',
     medium: 'Μέτριο (π.χ. για Εφοιβικό)',
     hard: 'Δύσκολο (π.χ. για Νεολαία και Μεγάλους)',
