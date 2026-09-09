@@ -187,7 +187,6 @@ export default function App() {
     setError(null);
 
     try {
-      // Change 'rooms' to 'room'
       const { data, error: dbError } = await supabase
           .from('room')
           .select('*')
