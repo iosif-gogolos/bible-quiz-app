@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import {
   Container, Card, CardContent, Typography,
@@ -183,6 +183,8 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     document.body.style.backgroundImage = appState === 'quiz'
         ? 'url("/background-quiz.png")'
@@ -199,6 +201,11 @@ export default function App() {
       setInputPassword(pinParam);
       setPlayMode('multiplayer');
       setMultiAction('join');
+
+      // Automatically focus the name input field after mount
+      setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 100);
     }
   }, []);
 
@@ -264,7 +271,11 @@ export default function App() {
   };
 
   const handleJoinRoom = async () => {
-    if (!playerName.trim() || !inputRoomCode.trim() || !inputPassword.trim()) {
+    if (!playerName.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
+    if (!inputRoomCode.trim() || !inputPassword.trim()) {
       setError('Please enter your name, room code, and password.');
       return;
     }
@@ -449,6 +460,7 @@ export default function App() {
                         </ToggleButtonGroup>
 
                         <TextField
+                            inputRef={nameInputRef}
                             label={t.enterName}
                             fullWidth
                             value={playerName}
