@@ -7,6 +7,8 @@ import {
   FormControl, FormLabel, Select, MenuItem, CircularProgress,
   IconButton, Menu, Avatar, TextField, ToggleButton, ToggleButtonGroup, Paper
 } from '@mui/material';
+import ShareIcon from '@mui/icons-material/Share';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
@@ -101,7 +103,8 @@ const uiTranslations = {
     quizLobby: 'Λόμπι Κουίζ',
     shareWithPlayers: 'Μοιράσου με τους παίκτες:',
     pin: 'PIN',
-    shareLink: 'Κοινή χρήση συνδέσμου'
+    shareLink: 'Κοινοποίηση συνδέσμου',
+    leaveLobby: 'Έξοδος από το δωμάτιο'
   },
 
   en: {
@@ -129,7 +132,8 @@ const uiTranslations = {
     quizLobby: 'Quiz Lobby',
     shareWithPlayers: 'Share with players:',
     pin: 'PIN',
-    shareLink: 'Share Link'
+    shareLink: 'Share Link',
+    leaveLobby: 'Leave Room'
   },
 
   de: {
@@ -157,7 +161,8 @@ const uiTranslations = {
     quizLobby: 'Quiz-Lobby',
     shareWithPlayers: 'Mit Spielern teilen:',
     pin: 'PIN',
-    shareLink: 'Link teilen'
+    shareLink: 'Link teilen',
+    leaveLobby: 'Raum verlassen'
   }
 };
 
@@ -380,6 +385,13 @@ export default function App() {
     }
   };
 
+  const handleLeaveLobby = () => {
+    setActiveRoom(null);
+    setAppState('setup');
+    // Clear query params if desired
+    window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
   const currentQuestion = activeQuestions[currentStep];
   const t = uiTranslations[settings.language];
 
@@ -539,9 +551,19 @@ export default function App() {
                       gap: 2
                     }}
                 >
-                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                    {t.quizLobby}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={handleLeaveLobby}
+                        size="small"
+                        sx={{ position: 'absolute', left: 0 }}
+                    >
+                      {t.leaveLobby}
+                    </Button>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', width: '100%' }}>
+                      {t.quizLobby}
+                    </Typography>
+                  </Box>
 
                   <Paper
                       elevation={2}
@@ -583,6 +605,7 @@ export default function App() {
                     <Button
                         variant="outlined"
                         size="small"
+                        startIcon={<ShareIcon />}
                         sx={{ mt: 2 }}
                         onClick={handleShare}
                     >
