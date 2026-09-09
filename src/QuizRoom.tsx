@@ -13,17 +13,15 @@ export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
     const [countdown, setCountdown] = useState(5);
 
     useEffect(() => {
-        // Subscribe to live room status changes
+        // Subscribe to live room status changes from Supabase Realtime
         const channel = supabase
             .channel(`room:${roomId}`)
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${roomId}` },
                 (payload) => {
-                    const newStatus = payload.new.status;
-                    setRoomStatus(newStatus);
-                    if (newStatus === 'countdown') {
-                        onStartQuiz();
+                    if (payload.new && payload.new.status) {
+                        setRoomStatus(payload.new.status);
                     }
                 }
             )
@@ -32,15 +30,17 @@ export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [roomId, onStartQuiz]);
+    }, [roomId]);
 
-    // 5-second countdown timer
+    // Handle local 5-second countdown when status shifts to 'countdown'
     useEffect(() => {
         if (roomStatus === 'countdown') {
             const timer = setInterval(() => {
                 setCountdown((prev) => {
                     if (prev <= 1) {
                         clearInterval(timer);
+                        // Trigger question load in parent component
+                        onStartQuiz();
                         return 0;
                     }
                     return prev - 1;
@@ -49,19 +49,23 @@ export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
 
             return () => clearInterval(timer);
         }
-    }, [roomStatus]);
+    }, [roomStatus, onStartQuiz]);
 
     const handleLaunchQuiz = async () => {
-        await supabase
+        const { error } = await supabase
             .from('room')
             .update({ status: 'countdown' })
             .eq('id', roomId);
+
+        if (error) {
+            console.error('Error updating room status:', error.message);
+        }
     };
 
     return (
         <Box sx={{ textAlign: 'center', mt: 2 }}>
             {roomStatus === 'waiting' && isHost && (
-                <Button variant="contained" color="primary" size="large" onClick={handleLaunchQuiz}>
+                <Button variant="contained" color="error" size="large" onClick={handleLaunchQuiz}>
                     Launch Quiz
                 </Button>
             )}
