@@ -8,9 +8,58 @@
   },
   {
     "id": 2,
+    "difficulty": "easy",
+    "question": "How many days and nights did it rain during the Flood?",
+    "options": ["7 days", "12 days", "40 days", "100 days"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 3,
+    "difficulty": "easy",
+    "question": "Who defeated the giant Goliath?",
+    "options": ["Saul", "David", "Solomon", "Samson"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 4,
     "difficulty": "medium",
-    "question": "Which Old Testament book comes before Ruth?",
+    "question": "Which Old Testament book comes immediately before Ruth?",
     "options": ["Genesis", "Judges", "Joshua", "1 Samuel"],
     "correctAnswer": 1
+  },
+  {
+    "id": 5,
+    "difficulty": "medium",
+    "question": "On which mountain did Moses receive the Ten Commandments?",
+    "options": ["Mount Nebo", "Mount Carmel", "Mount Sinai", "Mount Ararat"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 6,
+    "difficulty": "medium",
+    "question": "Which prophet was swallowed by a great fish?",
+    "options": ["Elijah", "Elisha", "Jonah", "Amos"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 7,
+    "difficulty": "hard",
+    "question": "Who was the high priest of Jerusalem during the trial of Jesus?",
+    "options": ["Annas", "Caiaphas", "Gamaliel", "Nicodemus"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 8,
+    "difficulty": "hard",
+    "question": "In the Book of Revelation, which church is called lukewarm?",
+    "options": ["Ephesus", "Smyrna", "Laodicea", "Sardis"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 9,
+    "difficulty": "hard",
+    "question": "How many years did the Israelites wander in the wilderness?",
+    "options": ["20 years", "30 years", "40 years", "50 years"],
+    "correctAnswer": 2
   }
 ]

@@ -8,9 +8,58 @@
   },
   {
     "id": 2,
+    "difficulty": "easy",
+    "question": "Wie viele Tage und Nächte regnete es während der Sintflut?",
+    "options": ["7 Tage", "12 Tage", "40 Tage", "100 Tage"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 3,
+    "difficulty": "easy",
+    "question": "Wer besiegte den Riesen Goliath?",
+    "options": ["Saul", "David", "Salomo", "Simson"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 4,
     "difficulty": "medium",
     "question": "Welches Buch des Alten Testaments steht direkt vor dem Buch Rut?",
     "options": ["1. Mose (Genesis)", "Richter", "Josua", "1. Samuel"],
     "correctAnswer": 1
+  },
+  {
+    "id": 5,
+    "difficulty": "medium",
+    "question": "Auf welchem Berg empfing Mose die Zehn Gebote?",
+    "options": ["Berg Nebo", "Berg Karmel", "Berg Sinai", "Berg Ararat"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 6,
+    "difficulty": "medium",
+    "question": "Welcher Prophet wurde von einem großen Fisch verschlungen?",
+    "options": ["Elija", "Elisa", "Jona", "Amos"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 7,
+    "difficulty": "hard",
+    "question": "Wer war der Hohepriester in Jerusalem während des Prozesses gegen Jesus?",
+    "options": ["Annas", "Kajaphas", "Gamaliel", "Nikodemus"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 8,
+    "difficulty": "hard",
+    "question": "Welche Gemeinde wird in der Offenbarung als lauwarm bezeichnet?",
+    "options": ["Ephesus", "Smyrna", "Laodizea", "Sardes"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 9,
+    "difficulty": "hard",
+    "question": "Wie viele Jahre wanderten die Israeliten durch die Wüste?",
+    "options": ["20 Jahre", "30 Jahre", "40 Jahre", "50 Jahre"],
+    "correctAnswer": 2
   }
 ]
