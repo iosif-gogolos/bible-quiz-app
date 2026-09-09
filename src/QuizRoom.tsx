@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './supabaseClient'; // Initialize Supabase client
+import { supabase } from './supabaseClient';
 
 export function QuizRoom({ roomId, isHost }: { roomId: string; isHost: boolean }) {
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress'>('waiting');
@@ -11,7 +11,7 @@ export function QuizRoom({ roomId, isHost }: { roomId: string; isHost: boolean }
             .channel(`room:${roomId}`)
             .on(
                 'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${roomId}` },
+                { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
                 (payload) => {
                     setRoomStatus(payload.new.status);
                 }
@@ -42,7 +42,7 @@ export function QuizRoom({ roomId, isHost }: { roomId: string; isHost: boolean }
 
     const handleLaunchQuiz = async () => {
         await supabase
-            .from('room')
+            .from('rooms')
             .update({ status: 'countdown' })
             .eq('id', roomId);
     };
