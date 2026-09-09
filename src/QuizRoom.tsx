@@ -11,7 +11,7 @@ export function QuizRoom({ roomId, isHost }: { roomId: string; isHost: boolean }
             .channel(`room:${roomId}`)
             .on(
                 'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
+                { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${roomId}` },
                 (payload) => {
                     setRoomStatus(payload.new.status);
                 }
@@ -42,7 +42,7 @@ export function QuizRoom({ roomId, isHost }: { roomId: string; isHost: boolean }
 
     const handleLaunchQuiz = async () => {
         await supabase
-            .from('rooms')
+            .from('room')
             .update({ status: 'countdown' })
             .eq('id', roomId);
     };
