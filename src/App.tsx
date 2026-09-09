@@ -66,7 +66,7 @@ const biblicalCities = {
     'Korinth',
     'Philippi',
     'Thessalonich',
-      'Athen'
+    'Athen'
   ]
 } as const;
 
@@ -100,7 +100,8 @@ const uiTranslations = {
     restart: 'Πίσω στην αρχική σελίδα',
     quizLobby: 'Λόμπι Κουίζ',
     shareWithPlayers: 'Μοιράσου με τους παίκτες:',
-    pin: 'PIN'
+    pin: 'PIN',
+    shareLink: 'Κοινή χρήση συνδέσμου'
   },
 
   en: {
@@ -127,7 +128,8 @@ const uiTranslations = {
     restart: 'Back to home screen',
     quizLobby: 'Quiz Lobby',
     shareWithPlayers: 'Share with players:',
-    pin: 'PIN'
+    pin: 'PIN',
+    shareLink: 'Share Link'
   },
 
   de: {
@@ -154,7 +156,8 @@ const uiTranslations = {
     restart: 'Zurück zum Startbildschirm',
     quizLobby: 'Quiz-Lobby',
     shareWithPlayers: 'Mit Spielern teilen:',
-    pin: 'PIN'
+    pin: 'PIN',
+    shareLink: 'Link teilen'
   }
 };
 
@@ -169,7 +172,7 @@ export default function App() {
   });
 
   const [playerName, setPlayerName] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState(5);
+  const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
   const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean } | null>(null);
@@ -183,8 +186,21 @@ export default function App() {
   useEffect(() => {
     document.body.style.backgroundImage = appState === 'quiz'
         ? 'url("/background-quiz.png")'
-        : 'url("/bg-launch-screen.png")';
+        : 'url("/bg-launch-screen.png");';
   }, [appState]);
+
+  // Handle auto-joining via URL parameters (e.g. ?room=Corinth&pin=HZTD)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    const pinParam = params.get('pin');
+    if (roomParam && pinParam) {
+      setInputRoomCode(roomParam);
+      setInputPassword(pinParam);
+      setPlayMode('multiplayer');
+      setMultiAction('join');
+    }
+  }, []);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
@@ -208,6 +224,7 @@ export default function App() {
 
     const generatedRoomName = getRandomBiblicalCity(settings.language);
     const generatedPin = generatePin();
+    const parsedMaxPlayers = typeof maxPlayers === 'string' ? parseInt(maxPlayers, 10) || 5 : maxPlayers;
 
     try {
       const { data, error: dbError } = await supabase
@@ -217,7 +234,7 @@ export default function App() {
               room_code: generatedRoomName,
               password: generatedPin,
               host_id: playerName.trim(),
-              max_players: maxPlayers,
+              max_players: parsedMaxPlayers,
               language: settings.language,
               difficulty: settings.difficulty,
               status: 'waiting'
@@ -259,24 +276,31 @@ export default function App() {
       const { data, error: dbError } = await supabase
           .from('room')
           .select('*')
-          .eq('room_code', inputRoomCode.trim().toUpperCase())
-          .eq('password', inputPassword.trim().toUpperCase())
-          .single();
+          .eq('password', inputPassword.trim().toUpperCase());
 
-      if (dbError || !data) {
+      if (dbError || !data || data.length === 0) {
+        throw new Error('Invalid room code or password.');
+      }
+
+      const matchedRoom = data.find(
+          (r) => r.room_code.trim().localeCompare(inputRoomCode.trim(), 'el', { sensitivity: 'accent' }) === 0 ||
+              r.room_code.trim() === inputRoomCode.trim()
+      );
+
+      if (!matchedRoom) {
         throw new Error('Invalid room code or password.');
       }
 
       setSettings(prev => ({
         ...prev,
-        language: data.language || prev.language,
-        difficulty: data.difficulty || prev.difficulty
+        language: matchedRoom.language || prev.language,
+        difficulty: matchedRoom.difficulty || prev.difficulty
       }));
 
       setActiveRoom({
-        id: data.id,
-        code: data.room_code,
-        pass: data.password,
+        id: matchedRoom.id,
+        code: matchedRoom.room_code,
+        pass: matchedRoom.password,
         isHost: false
       });
       setAppState('lobby');
@@ -321,6 +345,27 @@ export default function App() {
       setSelectedOption(null);
     } else {
       setAppState('finished');
+    }
+  };
+
+  const handleShare = async () => {
+    if (!activeRoom) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(activeRoom.code)}&pin=${encodeURIComponent(activeRoom.pass)}`;
+    const shareData = {
+      title: t.title,
+      text: `Join my Bible Quiz room! Room: ${activeRoom.code}, PIN: ${activeRoom.pass}`,
+      url: shareUrl
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // Fallback if user cancels share sheet
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert('Link copied to clipboard!');
     }
   };
 
@@ -426,10 +471,16 @@ export default function App() {
 
                               <TextField
                                   label={t.maxPlayers}
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
                                   fullWidth
                                   value={maxPlayers}
-                                  onChange={(e) => setMaxPlayers(Number(e.target.value))}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || /^\d+$/.test(val)) {
+                                      setMaxPlayers(val === '' ? '' : Number(val));
+                                    }
+                                  }}
                               />
 
                               <Button variant="contained" size="large" fullWidth onClick={handleCreateRoom} sx={{ mt: 1 }}>
@@ -516,6 +567,15 @@ export default function App() {
                       {t.pin}:{' '}
                       <strong>{activeRoom.pass}</strong>
                     </Typography>
+
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{ mt: 2 }}
+                        onClick={handleShare}
+                    >
+                      {t.shareLink}
+                    </Button>
                   </Paper>
 
                   <QuizRoom

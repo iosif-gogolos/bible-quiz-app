@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Button, Typography, Box, Chip } from '@mui/material';
+import { Button, Typography, Box, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { supabase } from './supabaseClient';
 
 interface QuizRoomProps {
@@ -13,9 +13,24 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress'>('waiting');
     const [countdown, setCountdown] = useState(5);
     const [players, setPlayers] = useState<string[]>([]);
+    const [maxPlayers, setMaxPlayers] = useState<number>(5);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const hasTriggeredRef = useRef(false);
 
     useEffect(() => {
+        // Fetch room details to know max players limit
+        supabase
+            .from('room')
+            .select('max_players, status')
+            .eq('id', roomId)
+            .single()
+            .then(({ data }) => {
+                if (data) {
+                    if (data.max_players) setMaxPlayers(data.max_players);
+                    if (data.status) setRoomStatus(data.status);
+                }
+            });
+
         // 1. Listen for room updates (status changes)
         const roomChannel = supabase
             .channel(`room_status:${roomId}`)
@@ -69,7 +84,6 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
                         if (!hasTriggeredRef.current) {
                             hasTriggeredRef.current = true;
 
-                            // Update database status from 'countdown' to 'in_progress'
                             if (isHost) {
                                 supabase
                                     .from('room')
@@ -90,7 +104,8 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
         }
     }, [roomStatus, onStartQuiz, isHost, roomId]);
 
-    const handleLaunchQuiz = async () => {
+    const handleConfirmLaunch = async () => {
+        setConfirmOpen(false);
         await supabase
             .from('room')
             .update({ status: 'countdown' })
@@ -101,7 +116,7 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
         <Box sx={{ textAlign: 'center', mt: 2 }}>
             <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Joined Players ({players.length}):
+                    Joined Players ({players.length}/{maxPlayers}):
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                     {players.map((p, idx) => (
@@ -111,7 +126,7 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
             </Box>
 
             {roomStatus === 'waiting' && isHost && (
-                <Button variant="contained" color="error" size="large" onClick={handleLaunchQuiz}>
+                <Button variant="contained" color="error" size="large" onClick={() => setConfirmOpen(true)}>
                     Launch Quiz
                 </Button>
             )}
@@ -127,6 +142,22 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
                     Quiz starts in: {countdown}
                 </Typography>
             )}
+
+            {/* Launch Validation Dialog */}
+            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                <DialogTitle>Launch Quiz?</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        {players.length}/{maxPlayers} users connected. Are they ready to launch the quiz?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                    <Button variant="contained" color="primary" onClick={handleConfirmLaunch}>
+                        Yes, Start
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
