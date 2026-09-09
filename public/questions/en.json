@@ -2,7 +2,7 @@
   {
     "id": 1,
     "difficulty": "easy",
-    "question": "What was the name of Naomi's daughter-in-law?",
+    "question": "Which of Naomi's daughters-in-law stayed with her after Naomi returned to Bethlehem?",
     "options": ["Ruth", "Orpah", "Rahab", "Susanna"],
     "correctAnswer": 0
   },
@@ -22,44 +22,128 @@
   },
   {
     "id": 4,
+    "difficulty": "easy",
+    "question": "Who built the ark according to the Book of Genesis?",
+    "options": ["Abraham", "Moses", "Noah", "Jacob"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 5,
+    "difficulty": "easy",
+    "question": "Who was the mother of Jesus?",
+    "options": ["Martha", "Mary", "Elizabeth", "Rachel"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 6,
+    "difficulty": "easy",
+    "question": "How many disciples did Jesus choose?",
+    "options": ["7", "10", "12", "14"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 7,
+    "difficulty": "easy",
+    "question": "Who led the Israelites out of Egypt?",
+    "options": ["Joshua", "Aaron", "Moses", "Samuel"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 8,
     "difficulty": "medium",
     "question": "Which Old Testament book comes immediately before Ruth?",
     "options": ["Genesis", "Judges", "Joshua", "1 Samuel"],
     "correctAnswer": 1
   },
   {
-    "id": 5,
+    "id": 9,
     "difficulty": "medium",
     "question": "On which mountain did Moses receive the Ten Commandments?",
     "options": ["Mount Nebo", "Mount Carmel", "Mount Sinai", "Mount Ararat"],
     "correctAnswer": 2
   },
   {
-    "id": 6,
+    "id": 10,
     "difficulty": "medium",
     "question": "Which prophet was swallowed by a great fish?",
     "options": ["Elijah", "Elisha", "Jonah", "Amos"],
     "correctAnswer": 2
   },
   {
-    "id": 7,
+    "id": 11,
+    "difficulty": "medium",
+    "question": "Who was the first king of Israel?",
+    "options": ["David", "Saul", "Solomon", "Samuel"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 12,
+    "difficulty": "medium",
+    "question": "Which apostle denied Jesus three times?",
+    "options": ["John", "Thomas", "Peter", "Andrew"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 13,
+    "difficulty": "medium",
+    "question": "What was the name of Abraham's son who was born to Sarah?",
+    "options": ["Ishmael", "Isaac", "Jacob", "Esau"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 14,
+    "difficulty": "medium",
+    "question": "How many books are in the New Testament?",
+    "options": ["17", "27", "39", "66"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 15,
     "difficulty": "hard",
     "question": "Who was the high priest of Jerusalem during the trial of Jesus?",
     "options": ["Annas", "Caiaphas", "Gamaliel", "Nicodemus"],
     "correctAnswer": 1
   },
   {
-    "id": 8,
+    "id": 16,
     "difficulty": "hard",
     "question": "In the Book of Revelation, which church is called lukewarm?",
     "options": ["Ephesus", "Smyrna", "Laodicea", "Sardis"],
     "correctAnswer": 2
   },
   {
-    "id": 9,
+    "id": 17,
     "difficulty": "hard",
     "question": "How many years did the Israelites wander in the wilderness?",
     "options": ["20 years", "30 years", "40 years", "50 years"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 18,
+    "difficulty": "hard",
+    "question": "Which king asked God for wisdom to govern Israel?",
+    "options": ["David", "Saul", "Solomon", "Hezekiah"],
+    "correctAnswer": 2
+  },
+  {
+    "id": 19,
+    "difficulty": "hard",
+    "question": "Who was the first Christian martyr mentioned in the Book of Acts?",
+    "options": ["James", "Stephen", "Barnabas", "Philip"],
+    "correctAnswer": 1
+  },
+  {
+    "id": 20,
+    "difficulty": "hard",
+    "question": "Which prophet confronted the prophets of Baal on Mount Carmel?",
+    "options": ["Elijah", "Elisha", "Isaiah", "Jeremiah"],
+    "correctAnswer": 0
+  },
+  {
+    "id": 21,
+    "difficulty": "hard",
+    "question": "Which New Testament book contains the famous 'faith, hope, and love' passage?",
+    "options": ["Romans", "Hebrews", "1 Corinthians", "Ephesians"],
     "correctAnswer": 2
   }
 ]

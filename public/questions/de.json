@@ -1,65 +1,150 @@
 [
-  {
-    "id": 1,
-    "difficulty": "easy",
-    "question": "Wie hieß die Schwiegertochter von Noomi?",
-    "options": ["Rut", "Orpa", "Rahab", "Susanna"],
-    "correctAnswer": 0
-  },
-  {
-    "id": 2,
-    "difficulty": "easy",
-    "question": "Wie viele Tage und Nächte regnete es während der Sintflut?",
-    "options": ["7 Tage", "12 Tage", "40 Tage", "100 Tage"],
-    "correctAnswer": 2
-  },
-  {
-    "id": 3,
-    "difficulty": "easy",
-    "question": "Wer besiegte den Riesen Goliath?",
-    "options": ["Saul", "David", "Salomo", "Simson"],
-    "correctAnswer": 1
-  },
-  {
-    "id": 4,
-    "difficulty": "medium",
-    "question": "Welches Buch des Alten Testaments steht direkt vor dem Buch Rut?",
-    "options": ["1. Mose (Genesis)", "Richter", "Josua", "1. Samuel"],
-    "correctAnswer": 1
-  },
-  {
-    "id": 5,
-    "difficulty": "medium",
-    "question": "Auf welchem Berg empfing Mose die Zehn Gebote?",
-    "options": ["Berg Nebo", "Berg Karmel", "Berg Sinai", "Berg Ararat"],
-    "correctAnswer": 2
-  },
-  {
-    "id": 6,
-    "difficulty": "medium",
-    "question": "Welcher Prophet wurde von einem großen Fisch verschlungen?",
-    "options": ["Elija", "Elisa", "Jona", "Amos"],
-    "correctAnswer": 2
-  },
-  {
-    "id": 7,
-    "difficulty": "hard",
-    "question": "Wer war der Hohepriester in Jerusalem während des Prozesses gegen Jesus?",
-    "options": ["Annas", "Kajaphas", "Gamaliel", "Nikodemus"],
-    "correctAnswer": 1
-  },
-  {
-    "id": 8,
-    "difficulty": "hard",
-    "question": "Welche Gemeinde wird in der Offenbarung als lauwarm bezeichnet?",
-    "options": ["Ephesus", "Smyrna", "Laodizea", "Sardes"],
-    "correctAnswer": 2
-  },
-  {
-    "id": 9,
-    "difficulty": "hard",
-    "question": "Wie viele Jahre wanderten die Israeliten durch die Wüste?",
-    "options": ["20 Jahre", "30 Jahre", "40 Jahre", "50 Jahre"],
-    "correctAnswer": 2
-  }
+{
+"id": 1,
+"difficulty": "easy",
+"question": "Welche von Naomis Schwiegertöchtern blieb bei ihr, nachdem Naomi nach Bethlehem zurückgekehrt war?",
+"options": ["Ruth", "Orpa", "Rahab", "Susanna"],
+"correctAnswer": 0
+},
+{
+"id": 2,
+"difficulty": "easy",
+"question": "Wie viele Tage und Nächte regnete es während der Sintflut?",
+"options": ["7 Tage", "12 Tage", "40 Tage", "100 Tage"],
+"correctAnswer": 2
+},
+{
+"id": 3,
+"difficulty": "easy",
+"question": "Wer besiegte den Riesen Goliath?",
+"options": ["Saul", "David", "Salomo", "Simson"],
+"correctAnswer": 1
+},
+{
+"id": 4,
+"difficulty": "easy",
+"question": "Wer baute laut dem Buch Genesis die Arche?",
+"options": ["Abraham", "Mose", "Noah", "Jakob"],
+"correctAnswer": 2
+},
+{
+"id": 5,
+"difficulty": "easy",
+"question": "Wie hieß die Mutter von Jesus?",
+"options": ["Marta", "Maria", "Elisabeth", "Rahel"],
+"correctAnswer": 1
+},
+{
+"id": 6,
+"difficulty": "easy",
+"question": "Wie viele Jünger wählte Jesus aus?",
+"options": ["7", "10", "12", "14"],
+"correctAnswer": 2
+},
+{
+"id": 7,
+"difficulty": "easy",
+"question": "Wer führte die Israeliten aus Ägypten?",
+"options": ["Josua", "Aaron", "Mose", "Samuel"],
+"correctAnswer": 2
+},
+{
+"id": 8,
+"difficulty": "medium",
+"question": "Welches Buch des Alten Testaments steht unmittelbar vor Rut?",
+"options": ["Genesis", "Richter", "Josua", "1. Samuel"],
+"correctAnswer": 1
+},
+{
+"id": 9,
+"difficulty": "medium",
+"question": "Auf welchem Berg empfing Mose die Zehn Gebote?",
+"options": ["Berg Nebo", "Berg Karmel", "Berg Sinai", "Berg Ararat"],
+"correctAnswer": 2
+},
+{
+"id": 10,
+"difficulty": "medium",
+"question": "Welcher Prophet wurde von einem großen Fisch verschluckt?",
+"options": ["Elija", "Elischa", "Jona", "Amos"],
+"correctAnswer": 2
+},
+{
+"id": 11,
+"difficulty": "medium",
+"question": "Wer war der erste König von Israel?",
+"options": ["David", "Saul", "Salomo", "Samuel"],
+"correctAnswer": 1
+},
+{
+"id": 12,
+"difficulty": "medium",
+"question": "Welcher Apostel verleugnete Jesus dreimal?",
+"options": ["Johannes", "Thomas", "Petrus", "Andreas"],
+"correctAnswer": 2
+},
+{
+"id": 13,
+"difficulty": "medium",
+"question": "Wie hieß Abrahams Sohn, der von Sara geboren wurde?",
+"options": ["Ismael", "Isaak", "Jakob", "Esau"],
+"correctAnswer": 1
+},
+{
+"id": 14,
+"difficulty": "medium",
+"question": "Wie viele Bücher umfasst das Neue Testament?",
+"options": ["17", "27", "39", "66"],
+"correctAnswer": 1
+},
+{
+"id": 15,
+"difficulty": "hard",
+"question": "Wer war der Hohepriester von Jerusalem während des Prozesses gegen Jesus?",
+"options": ["Hannas", "Kajaphas", "Gamaliel", "Nikodemus"],
+"correctAnswer": 1
+},
+{
+"id": 16,
+"difficulty": "hard",
+"question": "Welche Gemeinde wird im Buch der Offenbarung als lau bezeichnet?",
+"options": ["Ephesus", "Smyrna", "Laodizea", "Sardes"],
+"correctAnswer": 2
+},
+{
+"id": 17,
+"difficulty": "hard",
+"question": "Wie viele Jahre wanderten die Israeliten durch die Wüste?",
+"options": ["20 Jahre", "30 Jahre", "40 Jahre", "50 Jahre"],
+"correctAnswer": 2
+},
+{
+"id": 18,
+"difficulty": "hard",
+"question": "Welcher König bat Gott um Weisheit, um Israel zu regieren?",
+"options": ["David", "Saul", "Salomo", "Hiskia"],
+"correctAnswer": 2
+},
+{
+"id": 19,
+"difficulty": "hard",
+"question": "Wer war der erste christliche Märtyrer, der im Buch der Apostelgeschichte erwähnt wird?",
+"options": ["Jakobus", "Stephanus", "Barnabas", "Philippus"],
+"correctAnswer": 1
+},
+{
+"id": 20,
+"difficulty": "hard",
+"question": "Welcher Prophet trat auf dem Berg Karmel gegen die Propheten des Baal an?",
+"options": ["Elija", "Elischa", "Jesaja", "Jeremia"],
+"correctAnswer": 0
+},
+{
+"id": 21,
+"difficulty": "hard",
+"question": "Welches Buch des Neuen Testaments enthält die berühmte Aussage über Glaube, Hoffnung und Liebe?",
+"options": ["Römer", "Hebräer", "1. Korinther", "Epheser"],
+"correctAnswer": 2
+}
 ]
+
