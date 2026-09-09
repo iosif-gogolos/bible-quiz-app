@@ -1,21 +1,24 @@
-import { useEffect, useState } from 'react';
-import { Button, Typography, Box } from '@mui/material';
+import { useEffect, useState, useRef } from 'react';
+import { Button, Typography, Box, Chip } from '@mui/material';
 import { supabase } from './supabaseClient';
 
 interface QuizRoomProps {
     roomId: string;
     isHost: boolean;
+    playerName: string;
     onStartQuiz: () => void;
 }
 
-export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
+export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomProps) {
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress'>('waiting');
     const [countdown, setCountdown] = useState(5);
+    const [players, setPlayers] = useState<string[]>([]);
+    const hasTriggeredRef = useRef(false);
 
     useEffect(() => {
-        // Subscribe to live room status changes from Supabase Realtime
-        const channel = supabase
-            .channel(`room:${roomId}`)
+        // 1. Listen for room updates (status changes)
+        const roomChannel = supabase
+            .channel(`room_status:${roomId}`)
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${roomId}` },
@@ -27,20 +30,56 @@ export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
             )
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [roomId]);
+        // 2. Track presence of players currently in lobby
+        const presenceChannel = supabase.channel(`presence:${roomId}`);
 
-    // Handle local 5-second countdown when status shifts to 'countdown'
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState() as Record<string, Array<{ user: string }>>;
+                const joinedNames: string[] = [];
+                Object.keys(state).forEach((key) => {
+                    const presences = state[key];
+                    presences.forEach((p) => {
+                        if (p?.user && !joinedNames.includes(p.user)) {
+                            joinedNames.push(p.user);
+                        }
+                    });
+                });
+                setPlayers(joinedNames);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({ user: playerName });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(roomChannel);
+            supabase.removeChannel(presenceChannel);
+        };
+    }, [roomId, playerName]);
+
+    // Handle 5-second countdown & transition into quiz
     useEffect(() => {
         if (roomStatus === 'countdown') {
             const timer = setInterval(() => {
                 setCountdown((prev) => {
                     if (prev <= 1) {
                         clearInterval(timer);
-                        // Trigger question load in parent component
-                        onStartQuiz();
+                        if (!hasTriggeredRef.current) {
+                            hasTriggeredRef.current = true;
+
+                            // Update database status from 'countdown' to 'in_progress'
+                            if (isHost) {
+                                supabase
+                                    .from('room')
+                                    .update({ status: 'in_progress' })
+                                    .eq('id', roomId)
+                                    .then();
+                            }
+
+                            onStartQuiz();
+                        }
                         return 0;
                     }
                     return prev - 1;
@@ -49,21 +88,28 @@ export function QuizRoom({ roomId, isHost, onStartQuiz }: QuizRoomProps) {
 
             return () => clearInterval(timer);
         }
-    }, [roomStatus, onStartQuiz]);
+    }, [roomStatus, onStartQuiz, isHost, roomId]);
 
     const handleLaunchQuiz = async () => {
-        const { error } = await supabase
+        await supabase
             .from('room')
             .update({ status: 'countdown' })
             .eq('id', roomId);
-
-        if (error) {
-            console.error('Error updating room status:', error.message);
-        }
     };
 
     return (
         <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Joined Players ({players.length}):
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {players.map((p, idx) => (
+                        <Chip key={idx} label={p} color={p === playerName ? 'primary' : 'default'} />
+                    ))}
+                </Box>
+            </Box>
+
             {roomStatus === 'waiting' && isHost && (
                 <Button variant="contained" color="error" size="large" onClick={handleLaunchQuiz}>
                     Launch Quiz

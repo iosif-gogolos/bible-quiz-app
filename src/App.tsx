@@ -51,7 +51,7 @@ const biblicalCities = {
     'Corinth',
     'Philippi',
     'Thessalonica',
-      'Athens'
+    'Athens'
   ],
   de: [
     'Jerusalem',
