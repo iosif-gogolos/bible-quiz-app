@@ -187,8 +187,9 @@ export default function App() {
     setError(null);
 
     try {
+      // Change 'rooms' to 'room'
       const { data, error: dbError } = await supabase
-          .from('rooms')
+          .from('room')
           .select('*')
           .eq('room_code', inputRoomCode.trim().toUpperCase())
           .eq('password', inputPassword.trim().toUpperCase())
