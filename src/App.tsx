@@ -15,6 +15,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const generatePin = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -227,10 +228,11 @@ export default function App() {
   const [partyWins, setPartyWins] = useState<Record<string, number>>({});
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const gameChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (playerName) {
-      localStorage.getItem('bible_quiz_player_name') || localStorage.setItem('bible_quiz_player_name', playerName);
+      localStorage.setItem('bible_quiz_player_name', playerName);
     }
   }, [playerName]);
 
@@ -263,6 +265,8 @@ export default function App() {
       config: { broadcast: { self: true } }
     });
 
+    gameChannelRef.current = gameChannel;
+
     gameChannel
         .on('broadcast', { event: 'progress_update' }, ({ payload }) => {
           setPlayerProgress((prev) => ({
@@ -273,7 +277,9 @@ export default function App() {
           if (payload.status === 'finished') {
             setScores((prev) => {
               const exists = prev.some((p) => p.id === payload.id);
-              if (exists) return prev.map((p) => (p.id === payload.id ? { id: payload.id, name: payload.name, score: payload.score } : p));
+              if (exists) {
+                return prev.map((p) => (p.id === payload.id ? { id: payload.id, name: payload.name, score: payload.score } : p));
+              }
               return [...prev, { id: payload.id, name: payload.name, score: payload.score }];
             });
           }
@@ -299,6 +305,7 @@ export default function App() {
         .subscribe();
 
     return () => {
+      gameChannelRef.current = null;
       supabase.removeChannel(gameChannel);
       supabase.removeChannel(roomChannel);
     };
@@ -351,7 +358,7 @@ export default function App() {
             {
               room_code: generatedRoomName,
               password: generatedPin,
-              host_id: playerName.trim(),
+              host_id: playerId,
               max_players: parsedMaxPlayers,
               language: settings.language,
               difficulty: settings.difficulty,
@@ -417,7 +424,7 @@ export default function App() {
         difficulty: matchedRoom.difficulty || prev.difficulty
       }));
 
-      const isHostUser = matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase();
+      const isHostUser = matchedRoom.host_id === playerId;
       setActiveRoom({
         id: matchedRoom.id,
         code: matchedRoom.room_code,
@@ -433,9 +440,8 @@ export default function App() {
   };
 
   const broadcastProgress = async (step: number, total: number, isFinished: boolean, currentScore: number) => {
-    if (!activeRoom) return;
-    const channel = supabase.channel(`room_game:${activeRoom.id}`);
-    await channel.send({
+    if (!activeRoom || !gameChannelRef.current) return;
+    await gameChannelRef.current.send({
       type: 'broadcast',
       event: 'progress_update',
       payload: {
@@ -524,12 +530,13 @@ export default function App() {
         .update({ status: 'waiting' })
         .eq('id', activeRoom.id);
 
-    const channel = supabase.channel(`room_game:${activeRoom.id}`);
-    await channel.send({
-      type: 'broadcast',
-      event: 'launch_new_quiz',
-      payload: {}
-    });
+    if (gameChannelRef.current) {
+      await gameChannelRef.current.send({
+        type: 'broadcast',
+        event: 'launch_new_quiz',
+        payload: {}
+      });
+    }
 
     setAppState('lobby');
   };
@@ -829,26 +836,29 @@ export default function App() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {progressList.map((p) => (
-                                <TableRow key={p.id}>
-                                  <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                                      {p.id === playerId && <PersonIcon color="primary" fontSize="small" />}
-                                      <Typography variant="body2" sx={{ fontWeight: p.id === playerId ? 'bold' : 'normal' }}>
-                                        {p.name} {p.id === playerId ? `(${t.youBadge})` : ''}
-                                      </Typography>
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell align="center">{p.currentStep} / {p.total}</TableCell>
-                                  <TableCell align="right">
-                                    <Chip
-                                        size="small"
-                                        label={p.status === 'finished' ? t.finishedStatus : t.stillPlaying}
-                                        color={p.status === 'finished' ? 'success' : 'warning'}
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                            ))}
+                            {progressList.map((p) => {
+                              const isCurrentUser = p.id === playerId;
+                              return (
+                                  <TableRow key={p.id}>
+                                    <TableCell>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                        {isCurrentUser && <PersonIcon color="primary" fontSize="small" />}
+                                        <Typography variant="body2" sx={{ fontWeight: isCurrentUser ? 'bold' : 'normal' }}>
+                                          {p.name} {isCurrentUser ? `(${t.youBadge})` : ''}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="center">{p.currentStep} / {p.total}</TableCell>
+                                    <TableCell align="right">
+                                      <Chip
+                                          size="small"
+                                          label={p.status === 'finished' ? t.finishedStatus : t.stillPlaying}
+                                          color={p.status === 'finished' ? 'success' : 'warning'}
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>
@@ -881,26 +891,29 @@ export default function App() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {sortedScores.map((row, idx) => (
-                                <TableRow
-                                    key={row.id}
-                                    sx={{
-                                      bgcolor: row.id === playerId ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
-                                    }}
-                                >
-                                  <TableCell align="center">{idx + 1}</TableCell>
-                                  <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                                      {row.id === playerId && <PersonIcon color="primary" fontSize="small" />}
-                                      <Typography variant="body2" sx={{ fontWeight: row.id === playerId ? 'bold' : 'normal' }}>
-                                        {row.name} {row.id === playerId ? `(${t.youBadge})` : ''}
-                                      </Typography>
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
-                                  <TableCell align="center">{partyWins[row.id] || 0}</TableCell>
-                                </TableRow>
-                            ))}
+                            {sortedScores.map((row, idx) => {
+                              const isCurrentUser = row.id === playerId;
+                              return (
+                                  <TableRow
+                                      key={row.id}
+                                      sx={{
+                                        bgcolor: isCurrentUser ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
+                                      }}
+                                  >
+                                    <TableCell align="center">{idx + 1}</TableCell>
+                                    <TableCell>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                        {isCurrentUser && <PersonIcon color="primary" fontSize="small" />}
+                                        <Typography variant="body2" sx={{ fontWeight: isCurrentUser ? 'bold' : 'normal' }}>
+                                          {row.name} {isCurrentUser ? `(${t.youBadge})` : ''}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
+                                    <TableCell align="center">{partyWins[row.id] || 0}</TableCell>
+                                  </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>

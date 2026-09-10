@@ -23,6 +23,7 @@ interface QuizRoomProps {
         confirmDesc: string;
         cancel: string;
         confirmStart: string;
+        youBadge: string;
     };
 }
 
@@ -80,6 +81,7 @@ export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipate
             .on('presence', { event: 'sync' }, () => {
                 const state = presenceChannel.presenceState() as Record<string, Array<{ id: string; user: string; isPlayer: boolean }>>;
                 const joinedList: PlayerInfo[] = [];
+
                 Object.keys(state).forEach((key) => {
                     const presences = state[key];
                     presences.forEach((p) => {
@@ -88,6 +90,7 @@ export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipate
                         }
                     });
                 });
+
                 setPlayers(joinedList);
             })
             .subscribe(async (status) => {
@@ -151,9 +154,18 @@ export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipate
                             Waiting for players...
                         </Typography>
                     ) : (
-                        players.map((p) => (
-                            <Chip key={p.id} label={p.name} color={p.id === playerId ? 'primary' : 'default'} />
-                        ))
+                        players.map((p) => {
+                            const isCurrentUser = p.id === playerId;
+                            const labelText = isCurrentUser ? `${p.name} (${t.youBadge})` : p.name;
+                            return (
+                                <Chip
+                                    key={p.id}
+                                    label={labelText}
+                                    color={isCurrentUser ? 'primary' : 'default'}
+                                    variant={isCurrentUser ? 'filled' : 'outlined'}
+                                />
+                            );
+                        })
                     )}
                 </Box>
             </Box>
