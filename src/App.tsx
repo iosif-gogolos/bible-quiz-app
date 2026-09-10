@@ -5,10 +5,12 @@ import {
   Container, Card, CardContent, Typography,
   Button, RadioGroup, FormControlLabel, Radio, Box, LinearProgress,
   FormControl, FormLabel, Select, MenuItem, CircularProgress,
-  IconButton, Menu, Avatar, TextField, ToggleButton, ToggleButtonGroup, Paper
+  IconButton, Menu, Avatar, TextField, ToggleButton, ToggleButtonGroup, Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
@@ -16,60 +18,16 @@ import { QuizRoom } from './QuizRoom';
 const generatePin = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
-
   for (let i = 0; i < 4; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
   return result;
 };
 
 const biblicalCities = {
-  el: [
-    'Ιερουσαλήμ',
-    'Βηθλεέμ',
-    'Ναζαρέτ',
-    'Καπερναούμ',
-    'Βηθανία',
-    'Ιεριχώ',
-    'Κανά',
-    'Αντιόχεια',
-    'Έφεσος',
-    'Κόρινθος',
-    'Φίλιπποι',
-    'Θεσσαλονίκη',
-    'Aθήνα'
-  ],
-  en: [
-    'Jerusalem',
-    'Bethlehem',
-    'Nazareth',
-    'Capernaum',
-    'Bethany',
-    'Jericho',
-    'Cana',
-    'Antioch',
-    'Ephesus',
-    'Corinth',
-    'Philippi',
-    'Thessalonica',
-    'Athens'
-  ],
-  de: [
-    'Jerusalem',
-    'Bethlehem',
-    'Nazareth',
-    'Kapernaum',
-    'Bethanien',
-    'Jericho',
-    'Kana',
-    'Antiochia',
-    'Ephesus',
-    'Korinth',
-    'Philippi',
-    'Thessalonich',
-    'Athen'
-  ]
+  el: ['Ιερουσαλήμ', 'Βηθλεέμ', 'Ναζαρέτ', 'Καπερναούμ', 'Βηθανία', 'Ιεριχώ', 'Κανά', 'Αντιόχεια', 'Έφεσος', 'Κόρινθος', 'Φίλιπποι', 'Θεσσαλονίκη', 'Aθήνα'],
+  en: ['Jerusalem', 'Bethlehem', 'Nazareth', 'Capernaum', 'Bethany', 'Jericho', 'Cana', 'Antioch', 'Ephesus', 'Corinth', 'Philippi', 'Thessalonica', 'Athens'],
+  de: ['Jerusalem', 'Bethlehem', 'Nazareth', 'Kapernaum', 'Bethanien', 'Jericho', 'Kana', 'Antiochia', 'Ephesus', 'Korinth', 'Philippi', 'Thessalonich', 'Athen']
 } as const;
 
 const getRandomBiblicalCity = (language: Language): string => {
@@ -104,9 +62,21 @@ const uiTranslations = {
     shareWithPlayers: 'Μοιράσου με τους παίκτες:',
     pin: 'PIN',
     shareLink: 'Κοινοποίηση συνδέσμου',
-    leaveLobby: 'Έξοδος'
+    leaveLobby: 'Έξοδος',
+    joinedPlayers: 'Συνδεδεμένοι Παίκτες',
+    launchQuiz: 'Έναρξη Κουίζ',
+    waitingForHost: 'Αναμονή για τον οικοδεσπότη να ξεκινήσει το κουίζ...',
+    startsIn: 'Το κουίζ ξεκινά σε:',
+    confirmTitle: 'Έναρξη Κουίζ;',
+    confirmDesc: 'συνδεδεμένοι χρήστες. Είναι έτοιμοι για την έναρξη;',
+    cancel: 'Ακύρωση',
+    confirmStart: 'Ναι, Έναρξη',
+    waitingForOthers: 'Αναμονή για τους υπόλοιπους παίκτες...',
+    leaderboardTitle: 'Τελική Κατάταξη',
+    rank: 'Θέση',
+    player: 'Παίκτης',
+    points: 'Σκορ'
   },
-
   en: {
     title: 'Bible Quiz',
     difficultyLabel: 'Difficulty',
@@ -133,9 +103,21 @@ const uiTranslations = {
     shareWithPlayers: 'Share with players:',
     pin: 'PIN',
     shareLink: 'Share Link',
-    leaveLobby: 'Leave'
+    leaveLobby: 'Leave',
+    joinedPlayers: 'Joined Players',
+    launchQuiz: 'Launch Quiz',
+    waitingForHost: 'Waiting for host to launch the quiz...',
+    startsIn: 'Quiz starts in:',
+    confirmTitle: 'Launch Quiz?',
+    confirmDesc: 'users connected. Are they ready to launch the quiz?',
+    cancel: 'Cancel',
+    confirmStart: 'Yes, Start',
+    waitingForOthers: 'Waiting for other players to finish...',
+    leaderboardTitle: 'Final Leaderboard',
+    rank: 'Rank',
+    player: 'Player',
+    points: 'Score'
   },
-
   de: {
     title: 'Bibel-Quiz',
     difficultyLabel: 'Schwierigkeit',
@@ -162,12 +144,30 @@ const uiTranslations = {
     shareWithPlayers: 'Mit Spielern teilen:',
     pin: 'PIN',
     shareLink: 'Link teilen',
-    leaveLobby: 'Verlassen'
+    leaveLobby: 'Verlassen',
+    joinedPlayers: 'Verbundene Spieler',
+    launchQuiz: 'Quiz Starten',
+    waitingForHost: 'Warten auf den Gastgeber...',
+    startsIn: 'Quiz startet in:',
+    confirmTitle: 'Quiz starten?',
+    confirmDesc: 'Benutzer verbunden. Bereit zum Starten?',
+    cancel: 'Abbrechen',
+    confirmStart: 'Ja, Starten',
+    waitingForOthers: 'Warten auf andere Spieler...',
+    leaderboardTitle: 'Rangliste',
+    rank: 'Platz',
+    player: 'Spieler',
+    points: 'Punkte'
   }
 };
 
+interface PlayerScore {
+  name: string;
+  score: number;
+}
+
 export default function App() {
-  const [appState, setAppState] = useState<'setup' | 'lobby' | 'loading' | 'quiz' | 'finished'>('setup');
+  const [appState, setAppState] = useState<'setup' | 'lobby' | 'loading' | 'quiz' | 'waiting_results' | 'finished'>('setup');
   const [playMode, setPlayMode] = useState<'solo' | 'multiplayer'>('solo');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
 
@@ -176,7 +176,7 @@ export default function App() {
     difficulty: 'easy'
   });
 
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('bible_quiz_player_name') || '');
   const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
@@ -188,7 +188,15 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const [scores, setScores] = useState<PlayerScore[]>([]);
+
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (playerName) {
+      localStorage.setItem('bible_quiz_player_name', playerName);
+    }
+  }, [playerName]);
 
   useEffect(() => {
     document.body.style.backgroundImage = appState === 'quiz'
@@ -196,7 +204,6 @@ export default function App() {
         : 'url("/bg-launch-screen.png");';
   }, [appState]);
 
-  // Handle auto-joining via URL parameters (e.g. ?room=Corinth&pin=HZTD)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
@@ -207,12 +214,48 @@ export default function App() {
       setPlayMode('multiplayer');
       setMultiAction('join');
 
-      // Automatically focus the name input field after mount
       setTimeout(() => {
         nameInputRef.current?.focus();
       }, 100);
     }
   }, []);
+
+  // Listen for realtime score submissions & database room status updates
+  useEffect(() => {
+    if (!activeRoom) return;
+
+    const gameChannel = supabase.channel(`room_game:${activeRoom.id}`, {
+      config: { broadcast: { self: true } }
+    });
+
+    gameChannel
+        .on('broadcast', { event: 'submit_score' }, ({ payload }) => {
+          setScores((prev) => {
+            const exists = prev.some((p) => p.name === payload.name);
+            if (exists) return prev.map((p) => (p.name === payload.name ? payload : p));
+            return [...prev, payload];
+          });
+        })
+        .subscribe();
+
+    const roomChannel = supabase
+        .channel(`room_status_app:${activeRoom.id}`)
+        .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${activeRoom.id}` },
+            (payload) => {
+              if (payload.new && payload.new.status === 'finished') {
+                setAppState('finished');
+              }
+            }
+        )
+        .subscribe();
+
+    return () => {
+      supabase.removeChannel(gameChannel);
+      supabase.removeChannel(roomChannel);
+    };
+  }, [activeRoom]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
@@ -221,7 +264,7 @@ export default function App() {
   const handleCloseMenu = () => setAnchorEl(null);
 
   const handleSelectLanguage = (lang: Language) => {
-    setSettings(prev => ({ ...prev, language: lang }));
+    setSettings((prev) => ({ ...prev, language: lang }));
     handleCloseMenu();
   };
 
@@ -263,14 +306,9 @@ export default function App() {
         pass: generatedPin,
         isHost: true
       });
-
       setAppState('lobby');
     } catch (err) {
-      setError(
-          err instanceof Error
-              ? err.message
-              : 'Failed to create room.'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to create room.');
       setAppState('setup');
     }
   };
@@ -299,7 +337,8 @@ export default function App() {
       }
 
       const matchedRoom = data.find(
-          (r) => r.room_code.trim().localeCompare(inputRoomCode.trim(), 'el', { sensitivity: 'accent' }) === 0 ||
+          (r) =>
+              r.room_code.trim().localeCompare(inputRoomCode.trim(), 'el', { sensitivity: 'accent' }) === 0 ||
               r.room_code.trim() === inputRoomCode.trim()
       );
 
@@ -307,7 +346,7 @@ export default function App() {
         throw new Error('Invalid room code or password.');
       }
 
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
         language: matchedRoom.language || prev.language,
         difficulty: matchedRoom.difficulty || prev.difficulty
@@ -317,7 +356,7 @@ export default function App() {
         id: matchedRoom.id,
         code: matchedRoom.room_code,
         pass: matchedRoom.password,
-        isHost: false
+        isHost: matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase()
       });
       setAppState('lobby');
     } catch (err) {
@@ -337,6 +376,7 @@ export default function App() {
       setActiveQuestions(filtered.length > 0 ? filtered : allQuestions);
       setCurrentStep(0);
       setScore(0);
+      setScores([]);
       setSelectedOption(null);
       setAppState('quiz');
     } catch (err) {
@@ -351,16 +391,39 @@ export default function App() {
     await loadQuestionsAndStart();
   };
 
-  const handleNext = () => {
-    if (selectedOption === activeQuestions[currentStep].correctAnswer) {
-      setScore(prev => prev + 1);
+  const handleNext = async () => {
+    const isCorrect = selectedOption === activeQuestions[currentStep].correctAnswer;
+    const finalScore = isCorrect ? score + 1 : score;
+
+    if (isCorrect) {
+      setScore(finalScore);
     }
 
     if (currentStep + 1 < activeQuestions.length) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev) => prev + 1);
       setSelectedOption(null);
     } else {
-      setAppState('finished');
+      if (playMode === 'multiplayer' && activeRoom) {
+        setAppState('waiting_results');
+
+        // Broadcast current user's score to the room
+        const channel = supabase.channel(`room_game:${activeRoom.id}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'submit_score',
+          payload: { name: playerName, score: finalScore }
+        });
+
+        // If Host, check or finish room status in Supabase database
+        if (activeRoom.isHost) {
+          await supabase
+              .from('room')
+              .update({ status: 'finished' })
+              .eq('id', activeRoom.id);
+        }
+      } else {
+        setAppState('finished');
+      }
     }
   };
 
@@ -376,9 +439,7 @@ export default function App() {
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-      } catch (err) {
-        // Fallback if user cancels share sheet
-      }
+      } catch (err) {}
     } else {
       navigator.clipboard.writeText(shareUrl);
       alert('Link copied to clipboard!');
@@ -388,35 +449,36 @@ export default function App() {
   const handleLeaveLobby = () => {
     setActiveRoom(null);
     setAppState('setup');
-    // Clear query params if desired
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
   const currentQuestion = activeQuestions[currentStep];
   const t = uiTranslations[settings.language];
 
+  const sortedScores = [...scores].sort((a, b) => b.score - a.score);
+
   return (
       <Container maxWidth="sm" sx={{ mt: 4, position: 'relative' }}>
-        <Box sx={{ position: 'absolute', top: -16, right: 16, zIndex: 10 }}>
-          <IconButton
-              onClick={handleOpenMenu}
-              sx={{ p: 0.5, bgcolor: '#FFE600', '&:hover': { bgcolor: '#F0D800' } }}
-          >
-            <Avatar src={`/${settings.language}.png`} alt={settings.language} sx={{ width: 36, height: 36 }} />
-          </IconButton>
+        {/* Language switcher - ONLY visible on initial setup screen */}
+        {appState === 'setup' && (
+            <Box sx={{ position: 'absolute', top: -16, right: 16, zIndex: 10 }}>
+              <IconButton onClick={handleOpenMenu} sx={{ p: 0.5, bgcolor: '#FFE600', '&:hover': { bgcolor: '#F0D800' } }}>
+                <Avatar src={`/${settings.language}.png`} alt={settings.language} sx={{ width: 36, height: 36 }} />
+              </IconButton>
 
-          <Menu anchorEl={anchorEl} open={isMenuOpen} onClose={handleCloseMenu}>
-            <MenuItem onClick={() => handleSelectLanguage('en')}>
-              <Avatar src="/en.png" alt="English" sx={{ width: 32, height: 32, mr: 1 }} /> English
-            </MenuItem>
-            <MenuItem onClick={() => handleSelectLanguage('el')}>
-              <Avatar src="/el.png" alt="Greek" sx={{ width: 32, height: 32, mr: 1 }} /> Ελληνικά
-            </MenuItem>
-            <MenuItem onClick={() => handleSelectLanguage('de')}>
-              <Avatar src="/de.png" alt="German" sx={{ width: 32, height: 32, mr: 1 }} /> Deutsch
-            </MenuItem>
-          </Menu>
-        </Box>
+              <Menu anchorEl={anchorEl} open={isMenuOpen} onClose={handleCloseMenu}>
+                <MenuItem onClick={() => handleSelectLanguage('en')}>
+                  <Avatar src="/en.png" alt="English" sx={{ width: 32, height: 32, mr: 1 }} /> English
+                </MenuItem>
+                <MenuItem onClick={() => handleSelectLanguage('el')}>
+                  <Avatar src="/el.png" alt="Greek" sx={{ width: 32, height: 32, mr: 1 }} /> Ελληνικά
+                </MenuItem>
+                <MenuItem onClick={() => handleSelectLanguage('de')}>
+                  <Avatar src="/de.png" alt="German" sx={{ width: 32, height: 32, mr: 1 }} /> Deutsch
+                </MenuItem>
+              </Menu>
+            </Box>
+        )}
 
         <Card elevation={4} sx={{ borderRadius: '16px', mt: 3 }}>
           <CardContent sx={{ p: 4 }}>
@@ -428,12 +490,7 @@ export default function App() {
 
                   {error && <Typography color="error" align="center">{error}</Typography>}
 
-                  <ToggleButtonGroup
-                      value={playMode}
-                      exclusive
-                      fullWidth
-                      onChange={(_, val) => val && setPlayMode(val)}
-                  >
+                  <ToggleButtonGroup value={playMode} exclusive fullWidth onChange={(_, val) => val && setPlayMode(val)}>
                     <ToggleButton value="solo">{t.soloMode}</ToggleButton>
                     <ToggleButton value="multiplayer">{t.multiMode}</ToggleButton>
                   </ToggleButtonGroup>
@@ -543,21 +600,9 @@ export default function App() {
             )}
 
             {appState === 'lobby' && activeRoom && (
-                <Box
-                    sx={{
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2
-                    }}
-                >
+                <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Button
-                        startIcon={<ArrowBackIcon />}
-                        onClick={handleLeaveLobby}
-                        size="small"
-                        variant="outlined"
-                    >
+                    <Button startIcon={<ArrowBackIcon />} onClick={handleLeaveLobby} size="small" variant="outlined">
                       {t.leaveLobby}
                     </Button>
                     <Typography variant="h5" sx={{ fontWeight: 'bold', flexGrow: 1, textAlign: 'center', pr: 8 }}>
@@ -565,50 +610,20 @@ export default function App() {
                     </Typography>
                   </Box>
 
-                  <Paper
-                      elevation={2}
-                      sx={{
-                        p: 2,
-                        bgcolor: '#f5f5f5',
-                        borderRadius: 2
-                      }}
-                  >
-                    <Typography
-                        variant="subtitle2"
-                        color="text.secondary"
-                    >
+                  <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
                       {t.shareWithPlayers}
                     </Typography>
 
-                    <Typography
-                        variant="h6"
-                        sx={{
-                          letterSpacing: 2,
-                          mt: 1,
-                          textTransform: 'none'
-                        }}
-                    >
-                      {t.roomName}:{' '}
-                      <strong>{activeRoom.code}</strong>
+                    <Typography variant="h6" sx={{ letterSpacing: 2, mt: 1, textTransform: 'none' }}>
+                      {t.roomName}: <strong>{activeRoom.code}</strong>
                     </Typography>
 
-                    <Typography
-                        variant="h6"
-                        sx={{
-                          letterSpacing: 2
-                        }}
-                    >
-                      {t.pin}:{' '}
-                      <strong>{activeRoom.pass}</strong>
+                    <Typography variant="h6" sx={{ letterSpacing: 2 }}>
+                      {t.pin}: <strong>{activeRoom.pass}</strong>
                     </Typography>
 
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<ShareIcon />}
-                        sx={{ mt: 2 }}
-                        onClick={handleShare}
-                    >
+                    <Button variant="outlined" size="small" startIcon={<ShareIcon />} sx={{ mt: 2 }} onClick={handleShare}>
                       {t.shareLink}
                     </Button>
                   </Paper>
@@ -618,6 +633,7 @@ export default function App() {
                       isHost={activeRoom.isHost}
                       playerName={playerName}
                       onStartQuiz={loadQuestionsAndStart}
+                      t={t}
                   />
                 </Box>
             )}
@@ -666,15 +682,66 @@ export default function App() {
                 </>
             )}
 
-            {appState === 'finished' && (
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    {t.completed}
+            {/* Waiting for other players indicator with loading spinner */}
+            {appState === 'waiting_results' && (
+                <Box sx={{ textAlign: 'center', py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <CircularProgress size={60} />
+                  <Typography variant="h6" color="text.secondary">
+                    {t.waitingForOthers}
                   </Typography>
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
                     {t.score} {score} / {activeQuestions.length}
                   </Typography>
-                  <Button variant="contained" onClick={() => setAppState('setup')}>
+                </Box>
+            )}
+
+            {/* Final leaderboard / ranking view */}
+            {appState === 'finished' && (
+                <Box sx={{ textAlign: 'center' }}>
+                  <EmojiEventsIcon sx={{ fontSize: 60, color: '#fbc02d', mb: 1 }} />
+                  <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    {t.leaderboardTitle}
+                  </Typography>
+
+                  {playMode === 'multiplayer' && sortedScores.length > 0 ? (
+                      <TableContainer component={Paper} elevation={1} sx={{ my: 3, borderRadius: 2 }}>
+                        <Table size="small">
+                          <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableRow>
+                              <TableCell align="center"><strong>{t.rank}</strong></TableCell>
+                              <TableCell><strong>{t.player}</strong></TableCell>
+                              <TableCell align="right"><strong>{t.points}</strong></TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {sortedScores.map((row, idx) => (
+                                <TableRow
+                                    key={idx}
+                                    sx={{
+                                      bgcolor: row.name === playerName ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
+                                    }}
+                                >
+                                  <TableCell align="center">{idx + 1}</TableCell>
+                                  <TableCell>{row.name}</TableCell>
+                                  <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
+                                </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                  ) : (
+                      <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+                        {t.score} {score} / {activeQuestions.length}
+                      </Typography>
+                  )}
+
+                  <Button
+                      variant="contained"
+                      onClick={() => {
+                        setActiveRoom(null);
+                        setAppState('setup');
+                      }}
+                  >
                     {t.restart}
                   </Button>
                 </Box>

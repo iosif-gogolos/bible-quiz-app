@@ -7,10 +7,20 @@ interface QuizRoomProps {
     isHost: boolean;
     playerName: string;
     onStartQuiz: () => void;
+    t: {
+        joinedPlayers: string;
+        launchQuiz: string;
+        waitingForHost: string;
+        startsIn: string;
+        confirmTitle: string;
+        confirmDesc: string;
+        cancel: string;
+        confirmStart: string;
+    };
 }
 
-export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomProps) {
-    const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress'>('waiting');
+export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoomProps) {
+    const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress' | 'finished'>('waiting');
     const [countdown, setCountdown] = useState(5);
     const [players, setPlayers] = useState<string[]>([]);
     const [maxPlayers, setMaxPlayers] = useState<number>(5);
@@ -18,7 +28,6 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
     const hasTriggeredRef = useRef(false);
 
     useEffect(() => {
-        // Fetch room details to know max players limit
         supabase
             .from('room')
             .select('max_players, status')
@@ -31,7 +40,6 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
                 }
             });
 
-        // 1. Listen for room updates (status changes)
         const roomChannel = supabase
             .channel(`room_status:${roomId}`)
             .on(
@@ -45,7 +53,6 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
             )
             .subscribe();
 
-        // 2. Track presence of players currently in lobby
         const presenceChannel = supabase.channel(`presence:${roomId}`);
 
         presenceChannel
@@ -74,7 +81,6 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
         };
     }, [roomId, playerName]);
 
-    // Handle 5-second countdown & transition into quiz
     useEffect(() => {
         if (roomStatus === 'countdown') {
             const timer = setInterval(() => {
@@ -116,7 +122,7 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
         <Box sx={{ textAlign: 'center', mt: 2 }}>
             <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Joined Players ({players.length}/{maxPlayers}):
+                    {t.joinedPlayers} ({players.length}/{maxPlayers}):
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                     {players.map((p, idx) => (
@@ -127,34 +133,33 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz }: QuizRoomPr
 
             {roomStatus === 'waiting' && isHost && (
                 <Button variant="contained" color="error" size="large" onClick={() => setConfirmOpen(true)}>
-                    Launch Quiz
+                    {t.launchQuiz}
                 </Button>
             )}
 
             {roomStatus === 'waiting' && !isHost && (
                 <Typography variant="body2" color="text.secondary">
-                    Waiting for host to launch the quiz...
+                    {t.waitingForHost}
                 </Typography>
             )}
 
             {roomStatus === 'countdown' && (
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1976d2', my: 2 }}>
-                    Quiz starts in: {countdown}
+                    {t.startsIn} {countdown}
                 </Typography>
             )}
 
-            {/* Launch Validation Dialog */}
             <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                <DialogTitle>Launch Quiz?</DialogTitle>
+                <DialogTitle>{t.confirmTitle}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        {players.length}/{maxPlayers} users connected. Are they ready to launch the quiz?
+                        {players.length}/{maxPlayers} {t.confirmDesc}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setConfirmOpen(false)}>{t.cancel}</Button>
                     <Button variant="contained" color="primary" onClick={handleConfirmLaunch}>
-                        Yes, Start
+                        {t.confirmStart}
                     </Button>
                 </DialogActions>
             </Dialog>
