@@ -48,6 +48,10 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
                 (payload) => {
                     if (payload.new && payload.new.status) {
                         setRoomStatus(payload.new.status);
+                        if (payload.new.status === 'countdown') {
+                            hasTriggeredRef.current = false;
+                            setCountdown(5);
+                        }
                     }
                 }
             )
@@ -157,7 +161,12 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmOpen(false)}>{t.cancel}</Button>
+                    <Button
+                        onClick={() => setConfirmOpen(false)}
+                        sx={{ backgroundColor: '#E8DA4D', color: '#AC2F29', '&:hover': { backgroundColor: '#d8c93d' } }}
+                    >
+                        {t.cancel}
+                    </Button>
                     <Button variant="contained" color="primary" onClick={handleConfirmLaunch}>
                         {t.confirmStart}
                     </Button>

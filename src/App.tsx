@@ -6,7 +6,7 @@ import {
   Button, RadioGroup, FormControlLabel, Radio, Box, LinearProgress,
   FormControl, FormLabel, Select, MenuItem, CircularProgress,
   IconButton, Menu, Avatar, TextField, ToggleButton, ToggleButtonGroup, Paper,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Chip
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -75,7 +75,13 @@ const uiTranslations = {
     leaderboardTitle: 'Τελική Κατάταξη',
     rank: 'Θέση',
     player: 'Παίκτης',
-    points: 'Σκορ'
+    points: 'Σκορ',
+    participateLabel: 'Θέλω να συμμετάσχω στο κουίζ',
+    stillPlaying: 'Παίζει ακόμα...',
+    finishedStatus: 'Ολοκλήρωσε',
+    launchNewQuiz: 'Έναρξη Νέου Κουίζ',
+    wins: 'Νίκες',
+    hostMonitoring: 'Πρόοδος Παικτών'
   },
   en: {
     title: 'Bible Quiz',
@@ -116,7 +122,13 @@ const uiTranslations = {
     leaderboardTitle: 'Final Leaderboard',
     rank: 'Rank',
     player: 'Player',
-    points: 'Score'
+    points: 'Score',
+    participateLabel: 'I want to participate in the quiz',
+    stillPlaying: 'Still playing...',
+    finishedStatus: 'Finished',
+    launchNewQuiz: 'Launch New Quiz',
+    wins: 'Parties Won',
+    hostMonitoring: 'Player Progress'
   },
   de: {
     title: 'Bibel-Quiz',
@@ -157,7 +169,13 @@ const uiTranslations = {
     leaderboardTitle: 'Rangliste',
     rank: 'Platz',
     player: 'Spieler',
-    points: 'Punkte'
+    points: 'Punkte',
+    participateLabel: 'Ich möchte am Quiz teilnehmen',
+    stillPlaying: 'Spielt noch...',
+    finishedStatus: 'Fertig',
+    launchNewQuiz: 'Neues Quiz starten',
+    wins: 'Gewonnene Spiele',
+    hostMonitoring: 'Spielerfortschritt'
   }
 };
 
@@ -166,10 +184,19 @@ interface PlayerScore {
   score: number;
 }
 
+interface PlayerProgress {
+  name: string;
+  currentStep: number;
+  total: number;
+  status: 'playing' | 'finished';
+  score: number;
+}
+
 export default function App() {
   const [appState, setAppState] = useState<'setup' | 'lobby' | 'loading' | 'quiz' | 'waiting_results' | 'finished'>('setup');
   const [playMode, setPlayMode] = useState<'solo' | 'multiplayer'>('solo');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
+  const [participateHost, setParticipateHost] = useState(true);
 
   const [settings, setSettings] = useState<QuizSettings>({
     language: 'el',
@@ -180,7 +207,7 @@ export default function App() {
   const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
-  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean } | null>(null);
+  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean; hostParticipates?: boolean } | null>(null);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -189,12 +216,14 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [scores, setScores] = useState<PlayerScore[]>([]);
+  const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerProgress>>({});
+  const [partyWins, setPartyWins] = useState<Record<string, number>>({});
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (playerName) {
-      localStorage.setItem('bible_quiz_player_name', playerName);
+      localStorage.getItem('bible_quiz_player_name') || localStorage.setItem('bible_quiz_player_name', playerName);
     }
   }, [playerName]);
 
@@ -220,7 +249,7 @@ export default function App() {
     }
   }, []);
 
-  // Listen for realtime score submissions & database room status updates
+  // Sync real-time updates for scores, room status, and live progress
   useEffect(() => {
     if (!activeRoom) return;
 
@@ -229,12 +258,22 @@ export default function App() {
     });
 
     gameChannel
-        .on('broadcast', { event: 'submit_score' }, ({ payload }) => {
-          setScores((prev) => {
-            const exists = prev.some((p) => p.name === payload.name);
-            if (exists) return prev.map((p) => (p.name === payload.name ? payload : p));
-            return [...prev, payload];
-          });
+        .on('broadcast', { event: 'progress_update' }, ({ payload }) => {
+          setPlayerProgress((prev) => ({
+            ...prev,
+            [payload.name]: payload
+          }));
+
+          if (payload.status === 'finished') {
+            setScores((prev) => {
+              const exists = prev.some((p) => p.name === payload.name);
+              if (exists) return prev.map((p) => (p.name === payload.name ? { name: payload.name, score: payload.score } : p));
+              return [...prev, { name: payload.name, score: payload.score }];
+            });
+          }
+        })
+        .on('broadcast', { event: 'launch_new_quiz' }, () => {
+          setAppState('lobby');
         })
         .subscribe();
 
@@ -246,6 +285,8 @@ export default function App() {
             (payload) => {
               if (payload.new && payload.new.status === 'finished') {
                 setAppState('finished');
+              } else if (payload.new && payload.new.status === 'waiting') {
+                setAppState('lobby');
               }
             }
         )
@@ -256,6 +297,23 @@ export default function App() {
       supabase.removeChannel(roomChannel);
     };
   }, [activeRoom]);
+
+  // Track party wins whenever scores update on final state
+  useEffect(() => {
+    if (appState === 'finished' && scores.length > 0) {
+      const maxScore = Math.max(...scores.map((s) => s.score));
+      if (maxScore > 0) {
+        const winners = scores.filter((s) => s.score === maxScore).map((s) => s.name);
+        setPartyWins((prev) => {
+          const updated = { ...prev };
+          winners.forEach((w) => {
+            updated[w] = (updated[w] || 0) + 1;
+          });
+          return updated;
+        });
+      }
+    }
+  }, [appState, scores]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
@@ -304,7 +362,8 @@ export default function App() {
         id: data.id,
         code: generatedRoomName,
         pass: generatedPin,
-        isHost: true
+        isHost: true,
+        hostParticipates: participateHost
       });
       setAppState('lobby');
     } catch (err) {
@@ -356,13 +415,30 @@ export default function App() {
         id: matchedRoom.id,
         code: matchedRoom.room_code,
         pass: matchedRoom.password,
-        isHost: matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase()
+        isHost: matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase(),
+        hostParticipates: true
       });
       setAppState('lobby');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not join room.');
       setAppState('setup');
     }
+  };
+
+  const broadcastProgress = async (step: number, total: number, isFinished: boolean, currentScore: number) => {
+    if (!activeRoom) return;
+    const channel = supabase.channel(`room_game:${activeRoom.id}`);
+    await channel.send({
+      type: 'broadcast',
+      event: 'progress_update',
+      payload: {
+        name: playerName,
+        currentStep: step,
+        total,
+        status: isFinished ? 'finished' : 'playing',
+        score: currentScore
+      }
+    });
   };
 
   const loadQuestionsAndStart = async () => {
@@ -373,12 +449,20 @@ export default function App() {
       const allQuestions: Question[] = await response.json();
       const filtered = allQuestions.filter((q: Question) => q.difficulty === settings.difficulty);
 
-      setActiveQuestions(filtered.length > 0 ? filtered : allQuestions);
+      const chosenQuestions = filtered.length > 0 ? filtered : allQuestions;
+      setActiveQuestions(chosenQuestions);
       setCurrentStep(0);
       setScore(0);
       setScores([]);
+      setPlayerProgress({});
       setSelectedOption(null);
-      setAppState('quiz');
+
+      if (activeRoom?.isHost && !activeRoom.hostParticipates) {
+        setAppState('waiting_results');
+      } else {
+        setAppState('quiz');
+        await broadcastProgress(0, chosenQuestions.length, false, 0);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setAppState('setup');
@@ -399,32 +483,47 @@ export default function App() {
       setScore(finalScore);
     }
 
-    if (currentStep + 1 < activeQuestions.length) {
-      setCurrentStep((prev) => prev + 1);
+    const nextStep = currentStep + 1;
+    if (nextStep < activeQuestions.length) {
+      setCurrentStep(nextStep);
       setSelectedOption(null);
+      if (playMode === 'multiplayer') {
+        await broadcastProgress(nextStep, activeQuestions.length, false, finalScore);
+      }
     } else {
       if (playMode === 'multiplayer' && activeRoom) {
         setAppState('waiting_results');
-
-        // Broadcast current user's score to the room
-        const channel = supabase.channel(`room_game:${activeRoom.id}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'submit_score',
-          payload: { name: playerName, score: finalScore }
-        });
-
-        // If Host, check or finish room status in Supabase database
-        if (activeRoom.isHost) {
-          await supabase
-              .from('room')
-              .update({ status: 'finished' })
-              .eq('id', activeRoom.id);
-        }
+        await broadcastProgress(activeQuestions.length, activeQuestions.length, true, finalScore);
       } else {
         setAppState('finished');
       }
     }
+  };
+
+  const handleFinishQuizFromProgress = async () => {
+    if (activeRoom?.isHost) {
+      await supabase
+          .from('room')
+          .update({ status: 'finished' })
+          .eq('id', activeRoom.id);
+    }
+  };
+
+  const handleLaunchNewQuiz = async () => {
+    if (!activeRoom) return;
+    await supabase
+        .from('room')
+        .update({ status: 'waiting' })
+        .eq('id', activeRoom.id);
+
+    const channel = supabase.channel(`room_game:${activeRoom.id}`);
+    await channel.send({
+      type: 'broadcast',
+      event: 'launch_new_quiz',
+      payload: {}
+    });
+
+    setAppState('lobby');
   };
 
   const handleShare = async () => {
@@ -454,12 +553,11 @@ export default function App() {
 
   const currentQuestion = activeQuestions[currentStep];
   const t = uiTranslations[settings.language];
-
   const sortedScores = [...scores].sort((a, b) => b.score - a.score);
+  const progressList = Object.values(playerProgress);
 
   return (
       <Container maxWidth="sm" sx={{ mt: 4, position: 'relative' }}>
-        {/* Language switcher - ONLY visible on initial setup screen */}
         {appState === 'setup' && (
             <Box sx={{ position: 'absolute', top: -16, right: 16, zIndex: 10 }}>
               <IconButton onClick={handleOpenMenu} sx={{ p: 0.5, bgcolor: '#FFE600', '&:hover': { bgcolor: '#F0D800' } }}>
@@ -564,6 +662,17 @@ export default function App() {
                                   }}
                               />
 
+                              <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                        checked={participateHost}
+                                        onChange={(e) => setParticipateHost(e.target.checked)}
+                                        color="primary"
+                                    />
+                                  }
+                                  label={t.participateLabel}
+                              />
+
                               <Button variant="contained" size="large" fullWidth onClick={handleCreateRoom} sx={{ mt: 1 }}>
                                 {t.createRoom}
                               </Button>
@@ -602,7 +711,12 @@ export default function App() {
             {appState === 'lobby' && activeRoom && (
                 <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Button startIcon={<ArrowBackIcon />} onClick={handleLeaveLobby} size="small" variant="outlined">
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={handleLeaveLobby}
+                        size="small"
+                        sx={{ backgroundColor: '#E8DA4D', color: '#AC2F29', '&:hover': { backgroundColor: '#d8c93d' } }}
+                    >
                       {t.leaveLobby}
                     </Button>
                     <Typography variant="h5" sx={{ fontWeight: 'bold', flexGrow: 1, textAlign: 'center', pr: 8 }}>
@@ -623,7 +737,12 @@ export default function App() {
                       {t.pin}: <strong>{activeRoom.pass}</strong>
                     </Typography>
 
-                    <Button variant="outlined" size="small" startIcon={<ShareIcon />} sx={{ mt: 2 }} onClick={handleShare}>
+                    <Button
+                        size="small"
+                        startIcon={<ShareIcon />}
+                        sx={{ mt: 2, backgroundColor: '#E8DA4D', color: '#AC2F29', '&:hover': { backgroundColor: '#d8c93d' } }}
+                        onClick={handleShare}
+                    >
                       {t.shareLink}
                     </Button>
                   </Paper>
@@ -682,20 +801,52 @@ export default function App() {
                 </>
             )}
 
-            {/* Waiting for other players indicator with loading spinner */}
+            {/* Player status & progress tracking screen */}
             {appState === 'waiting_results' && (
-                <Box sx={{ textAlign: 'center', py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <CircularProgress size={60} />
+                <Box sx={{ textAlign: 'center', py: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <CircularProgress size={50} />
                   <Typography variant="h6" color="text.secondary">
-                    {t.waitingForOthers}
+                    {activeRoom?.isHost && !activeRoom.hostParticipates ? t.hostMonitoring : t.waitingForOthers}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t.score} {score} / {activeQuestions.length}
-                  </Typography>
+
+                  {progressList.length > 0 && (
+                      <TableContainer component={Paper} elevation={1} sx={{ my: 2, borderRadius: 2 }}>
+                        <Table size="small">
+                          <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableRow>
+                              <TableCell><strong>{t.player}</strong></TableCell>
+                              <TableCell align="center"><strong>{t.question}</strong></TableCell>
+                              <TableCell align="right"><strong>Status</strong></TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {progressList.map((p, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{p.name}</TableCell>
+                                  <TableCell align="center">{p.currentStep} / {p.total}</TableCell>
+                                  <TableCell align="right">
+                                    <Chip
+                                        size="small"
+                                        label={p.status === 'finished' ? t.finishedStatus : t.stillPlaying}
+                                        color={p.status === 'finished' ? 'success' : 'warning'}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                  )}
+
+                  {activeRoom?.isHost && (
+                      <Button variant="contained" color="primary" onClick={handleFinishQuizFromProgress} sx={{ mt: 1 }}>
+                        Show Final Scoreboard
+                      </Button>
+                  )}
                 </Box>
             )}
 
-            {/* Final leaderboard / ranking view */}
+            {/* Final leaderboard & Parties Won score screen */}
             {appState === 'finished' && (
                 <Box sx={{ textAlign: 'center' }}>
                   <EmojiEventsIcon sx={{ fontSize: 60, color: '#fbc02d', mb: 1 }} />
@@ -711,6 +862,7 @@ export default function App() {
                               <TableCell align="center"><strong>{t.rank}</strong></TableCell>
                               <TableCell><strong>{t.player}</strong></TableCell>
                               <TableCell align="right"><strong>{t.points}</strong></TableCell>
+                              <TableCell align="center"><strong>{t.wins}</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -724,6 +876,7 @@ export default function App() {
                                   <TableCell align="center">{idx + 1}</TableCell>
                                   <TableCell>{row.name}</TableCell>
                                   <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
+                                  <TableCell align="center">{partyWins[row.name] || 0}</TableCell>
                                 </TableRow>
                             ))}
                           </TableBody>
@@ -735,15 +888,23 @@ export default function App() {
                       </Typography>
                   )}
 
-                  <Button
-                      variant="contained"
-                      onClick={() => {
-                        setActiveRoom(null);
-                        setAppState('setup');
-                      }}
-                  >
-                    {t.restart}
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mt: 2 }}>
+                    {playMode === 'multiplayer' && activeRoom?.isHost && (
+                        <Button variant="contained" color="primary" onClick={handleLaunchNewQuiz}>
+                          {t.launchNewQuiz}
+                        </Button>
+                    )}
+
+                    <Button
+                        onClick={() => {
+                          setActiveRoom(null);
+                          setAppState('setup');
+                        }}
+                        sx={{ backgroundColor: '#E8DA4D', color: '#AC2F29', fontWeight: 'bold', '&:hover': { backgroundColor: '#d8c93d' } }}
+                    >
+                      {t.restart}
+                    </Button>
+                  </Box>
                 </Box>
             )}
           </CardContent>
