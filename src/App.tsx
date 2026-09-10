@@ -11,6 +11,7 @@ import {
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import PersonIcon from '@mui/icons-material/Person';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
@@ -81,7 +82,8 @@ const uiTranslations = {
     finishedStatus: 'Ολοκλήρωσε',
     launchNewQuiz: 'Έναρξη Νέου Κουίζ',
     wins: 'Νίκες',
-    hostMonitoring: 'Πρόοδος Παικτών'
+    hostMonitoring: 'Πρόοδος Παικτών',
+    youBadge: 'Εσύ'
   },
   en: {
     title: 'Bible Quiz',
@@ -128,7 +130,8 @@ const uiTranslations = {
     finishedStatus: 'Finished',
     launchNewQuiz: 'Launch New Quiz',
     wins: 'Parties Won',
-    hostMonitoring: 'Player Progress'
+    hostMonitoring: 'Player Progress',
+    youBadge: 'You'
   },
   de: {
     title: 'Bibel-Quiz',
@@ -175,7 +178,8 @@ const uiTranslations = {
     finishedStatus: 'Fertig',
     launchNewQuiz: 'Neues Quiz starten',
     wins: 'Gewonnene Spiele',
-    hostMonitoring: 'Spielerfortschritt'
+    hostMonitoring: 'Spielerfortschritt',
+    youBadge: 'Du'
   }
 };
 
@@ -827,7 +831,14 @@ export default function App() {
                           <TableBody>
                             {progressList.map((p) => (
                                 <TableRow key={p.id}>
-                                  <TableCell>{p.name}</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                      {p.id === playerId && <PersonIcon color="primary" fontSize="small" />}
+                                      <Typography variant="body2" sx={{ fontWeight: p.id === playerId ? 'bold' : 'normal' }}>
+                                        {p.name} {p.id === playerId ? `(${t.youBadge})` : ''}
+                                      </Typography>
+                                    </Box>
+                                  </TableCell>
                                   <TableCell align="center">{p.currentStep} / {p.total}</TableCell>
                                   <TableCell align="right">
                                     <Chip
@@ -878,7 +889,14 @@ export default function App() {
                                     }}
                                 >
                                   <TableCell align="center">{idx + 1}</TableCell>
-                                  <TableCell>{row.name}</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                      {row.id === playerId && <PersonIcon color="primary" fontSize="small" />}
+                                      <Typography variant="body2" sx={{ fontWeight: row.id === playerId ? 'bold' : 'normal' }}>
+                                        {row.name} {row.id === playerId ? `(${t.youBadge})` : ''}
+                                      </Typography>
+                                    </Box>
+                                  </TableCell>
                                   <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
                                   <TableCell align="center">{partyWins[row.id] || 0}</TableCell>
                                 </TableRow>
