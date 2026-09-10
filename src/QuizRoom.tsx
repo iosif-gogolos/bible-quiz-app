@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button, Typography, Box, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { supabase } from './supabaseClient';
 
 interface PlayerInfo {
@@ -13,7 +14,9 @@ interface QuizRoomProps {
     playerName: string;
     playerId: string;
     hostParticipates?: boolean;
+    gameMode?: 'regular' | 'tournament';
     onStartQuiz: () => void;
+    onKickPlayer?: (targetPlayerId: string) => void;
     t: {
         joinedPlayers: string;
         launchQuiz: string;
@@ -27,7 +30,17 @@ interface QuizRoomProps {
     };
 }
 
-export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipates = true, onStartQuiz, t }: QuizRoomProps) {
+export function QuizRoom({
+                             roomId,
+                             isHost,
+                             playerName,
+                             playerId,
+                             hostParticipates = true,
+                             gameMode = 'regular',
+                             onStartQuiz,
+                             onKickPlayer,
+                             t
+                         }: QuizRoomProps) {
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress' | 'finished'>('waiting');
     const [countdown, setCountdown] = useState(5);
     const [players, setPlayers] = useState<PlayerInfo[]>([]);
@@ -163,6 +176,12 @@ export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipate
                                     label={labelText}
                                     color={isCurrentUser ? 'primary' : 'default'}
                                     variant={isCurrentUser ? 'filled' : 'outlined'}
+                                    onDelete={
+                                        isHost && gameMode === 'tournament' && !isCurrentUser && onKickPlayer
+                                            ? () => onKickPlayer(p.id)
+                                            : undefined
+                                    }
+                                    deleteIcon={<CloseIcon />}
                                 />
                             );
                         })
