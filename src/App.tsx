@@ -180,11 +180,13 @@ const uiTranslations = {
 };
 
 interface PlayerScore {
+  id: string;
   name: string;
   score: number;
 }
 
 interface PlayerProgress {
+  id: string;
   name: string;
   currentStep: number;
   total: number;
@@ -193,6 +195,7 @@ interface PlayerProgress {
 }
 
 export default function App() {
+  const [playerId] = useState<string>(() => crypto.randomUUID());
   const [appState, setAppState] = useState<'setup' | 'lobby' | 'loading' | 'quiz' | 'waiting_results' | 'finished'>('setup');
   const [playMode, setPlayMode] = useState<'solo' | 'multiplayer'>('solo');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
@@ -260,14 +263,14 @@ export default function App() {
         .on('broadcast', { event: 'progress_update' }, ({ payload }) => {
           setPlayerProgress((prev) => ({
             ...prev,
-            [payload.name]: payload
+            [payload.id]: payload
           }));
 
           if (payload.status === 'finished') {
             setScores((prev) => {
-              const exists = prev.some((p) => p.name === payload.name);
-              if (exists) return prev.map((p) => (p.name === payload.name ? { name: payload.name, score: payload.score } : p));
-              return [...prev, { name: payload.name, score: payload.score }];
+              const exists = prev.some((p) => p.id === payload.id);
+              if (exists) return prev.map((p) => (p.id === payload.id ? { id: payload.id, name: payload.name, score: payload.score } : p));
+              return [...prev, { id: payload.id, name: payload.name, score: payload.score }];
             });
           }
         })
@@ -301,11 +304,11 @@ export default function App() {
     if (appState === 'finished' && scores.length > 0) {
       const maxScore = Math.max(...scores.map((s) => s.score));
       if (maxScore > 0) {
-        const winners = scores.filter((s) => s.score === maxScore).map((s) => s.name);
+        const winners = scores.filter((s) => s.score === maxScore).map((s) => s.id);
         setPartyWins((prev) => {
           const updated = { ...prev };
-          winners.forEach((w) => {
-            updated[w] = (updated[w] || 0) + 1;
+          winners.forEach((wId) => {
+            updated[wId] = (updated[wId] || 0) + 1;
           });
           return updated;
         });
@@ -432,6 +435,7 @@ export default function App() {
       type: 'broadcast',
       event: 'progress_update',
       payload: {
+        id: playerId,
         name: playerName,
         currentStep: step,
         total,
@@ -752,6 +756,7 @@ export default function App() {
                       isHost={activeRoom.isHost}
                       hostParticipates={activeRoom.hostParticipates}
                       playerName={playerName}
+                      playerId={playerId}
                       onStartQuiz={loadQuestionsAndStart}
                       t={t}
                   />
@@ -820,8 +825,8 @@ export default function App() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {progressList.map((p, idx) => (
-                                <TableRow key={idx}>
+                            {progressList.map((p) => (
+                                <TableRow key={p.id}>
                                   <TableCell>{p.name}</TableCell>
                                   <TableCell align="center">{p.currentStep} / {p.total}</TableCell>
                                   <TableCell align="right">
@@ -867,15 +872,15 @@ export default function App() {
                           <TableBody>
                             {sortedScores.map((row, idx) => (
                                 <TableRow
-                                    key={idx}
+                                    key={row.id}
                                     sx={{
-                                      bgcolor: row.name === playerName ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
+                                      bgcolor: row.id === playerId ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
                                     }}
                                 >
                                   <TableCell align="center">{idx + 1}</TableCell>
                                   <TableCell>{row.name}</TableCell>
                                   <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
-                                  <TableCell align="center">{partyWins[row.name] || 0}</TableCell>
+                                  <TableCell align="center">{partyWins[row.id] || 0}</TableCell>
                                 </TableRow>
                             ))}
                           </TableBody>

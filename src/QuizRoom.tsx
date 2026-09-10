@@ -2,10 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { Button, Typography, Box, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { supabase } from './supabaseClient';
 
+interface PlayerInfo {
+    id: string;
+    name: string;
+}
+
 interface QuizRoomProps {
     roomId: string;
     isHost: boolean;
     playerName: string;
+    playerId: string;
     hostParticipates?: boolean;
     onStartQuiz: () => void;
     t: {
@@ -20,10 +26,10 @@ interface QuizRoomProps {
     };
 }
 
-export function QuizRoom({ roomId, isHost, playerName, hostParticipates = true, onStartQuiz, t }: QuizRoomProps) {
+export function QuizRoom({ roomId, isHost, playerName, playerId, hostParticipates = true, onStartQuiz, t }: QuizRoomProps) {
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress' | 'finished'>('waiting');
     const [countdown, setCountdown] = useState(5);
-    const [players, setPlayers] = useState<string[]>([]);
+    const [players, setPlayers] = useState<PlayerInfo[]>([]);
     const [maxPlayers, setMaxPlayers] = useState<number>(5);
     const [isHostParticipating, setIsHostParticipating] = useState<boolean>(hostParticipates);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -72,21 +78,21 @@ export function QuizRoom({ roomId, isHost, playerName, hostParticipates = true, 
 
         presenceChannel
             .on('presence', { event: 'sync' }, () => {
-                const state = presenceChannel.presenceState() as Record<string, Array<{ user: string; isPlayer: boolean }>>;
-                const joinedNames: string[] = [];
+                const state = presenceChannel.presenceState() as Record<string, Array<{ id: string; user: string; isPlayer: boolean }>>;
+                const joinedList: PlayerInfo[] = [];
                 Object.keys(state).forEach((key) => {
                     const presences = state[key];
                     presences.forEach((p) => {
-                        if (p?.user && p?.isPlayer && !joinedNames.includes(p.user)) {
-                            joinedNames.push(p.user);
+                        if (p?.id && p?.isPlayer && !joinedList.some((item) => item.id === p.id)) {
+                            joinedList.push({ id: p.id, name: p.user });
                         }
                     });
                 });
-                setPlayers(joinedNames);
+                setPlayers(joinedList);
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await presenceChannel.track({ user: playerName, isPlayer: amIPlayer });
+                    await presenceChannel.track({ id: playerId, user: playerName, isPlayer: amIPlayer });
                 }
             });
 
@@ -94,7 +100,7 @@ export function QuizRoom({ roomId, isHost, playerName, hostParticipates = true, 
             supabase.removeChannel(roomChannel);
             supabase.removeChannel(presenceChannel);
         };
-    }, [roomId, playerName, isHost, isHostParticipating]);
+    }, [roomId, playerName, playerId, isHost, isHostParticipating]);
 
     useEffect(() => {
         if (roomStatus === 'countdown') {
@@ -145,8 +151,8 @@ export function QuizRoom({ roomId, isHost, playerName, hostParticipates = true, 
                             Waiting for players...
                         </Typography>
                     ) : (
-                        players.map((p, idx) => (
-                            <Chip key={idx} label={p} color={p === playerName ? 'primary' : 'default'} />
+                        players.map((p) => (
+                            <Chip key={p.id} label={p.name} color={p.id === playerId ? 'primary' : 'default'} />
                         ))
                     )}
                 </Box>
