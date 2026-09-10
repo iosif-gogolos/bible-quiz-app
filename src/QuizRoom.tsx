@@ -6,6 +6,7 @@ interface QuizRoomProps {
     roomId: string;
     isHost: boolean;
     playerName: string;
+    hostParticipates?: boolean;
     onStartQuiz: () => void;
     t: {
         joinedPlayers: string;
@@ -19,24 +20,28 @@ interface QuizRoomProps {
     };
 }
 
-export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoomProps) {
+export function QuizRoom({ roomId, isHost, playerName, hostParticipates = true, onStartQuiz, t }: QuizRoomProps) {
     const [roomStatus, setRoomStatus] = useState<'waiting' | 'countdown' | 'in_progress' | 'finished'>('waiting');
     const [countdown, setCountdown] = useState(5);
     const [players, setPlayers] = useState<string[]>([]);
     const [maxPlayers, setMaxPlayers] = useState<number>(5);
+    const [isHostParticipating, setIsHostParticipating] = useState<boolean>(hostParticipates);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const hasTriggeredRef = useRef(false);
 
     useEffect(() => {
         supabase
             .from('room')
-            .select('max_players, status')
+            .select('max_players, status, host_participates')
             .eq('id', roomId)
             .single()
             .then(({ data }) => {
                 if (data) {
                     if (data.max_players) setMaxPlayers(data.max_players);
                     if (data.status) setRoomStatus(data.status);
+                    if (typeof data.host_participates === 'boolean') {
+                        setIsHostParticipating(data.host_participates);
+                    }
                 }
             });
 
@@ -46,27 +51,33 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'room', filter: `id=eq.${roomId}` },
                 (payload) => {
-                    if (payload.new && payload.new.status) {
-                        setRoomStatus(payload.new.status);
-                        if (payload.new.status === 'countdown') {
-                            hasTriggeredRef.current = false;
-                            setCountdown(5);
+                    if (payload.new) {
+                        if (payload.new.status) {
+                            setRoomStatus(payload.new.status);
+                            if (payload.new.status === 'countdown') {
+                                hasTriggeredRef.current = false;
+                                setCountdown(5);
+                            }
+                        }
+                        if (typeof payload.new.host_participates === 'boolean') {
+                            setIsHostParticipating(payload.new.host_participates);
                         }
                     }
                 }
             )
             .subscribe();
 
+        const amIPlayer = !isHost || isHostParticipating;
         const presenceChannel = supabase.channel(`presence:${roomId}`);
 
         presenceChannel
             .on('presence', { event: 'sync' }, () => {
-                const state = presenceChannel.presenceState() as Record<string, Array<{ user: string }>>;
+                const state = presenceChannel.presenceState() as Record<string, Array<{ user: string; isPlayer: boolean }>>;
                 const joinedNames: string[] = [];
                 Object.keys(state).forEach((key) => {
                     const presences = state[key];
                     presences.forEach((p) => {
-                        if (p?.user && !joinedNames.includes(p.user)) {
+                        if (p?.user && p?.isPlayer && !joinedNames.includes(p.user)) {
                             joinedNames.push(p.user);
                         }
                     });
@@ -75,7 +86,7 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await presenceChannel.track({ user: playerName });
+                    await presenceChannel.track({ user: playerName, isPlayer: amIPlayer });
                 }
             });
 
@@ -83,7 +94,7 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
             supabase.removeChannel(roomChannel);
             supabase.removeChannel(presenceChannel);
         };
-    }, [roomId, playerName]);
+    }, [roomId, playerName, isHost, isHostParticipating]);
 
     useEffect(() => {
         if (roomStatus === 'countdown') {
@@ -129,9 +140,15 @@ export function QuizRoom({ roomId, isHost, playerName, onStartQuiz, t }: QuizRoo
                     {t.joinedPlayers} ({players.length}/{maxPlayers}):
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    {players.map((p, idx) => (
-                        <Chip key={idx} label={p} color={p === playerName ? 'primary' : 'default'} />
-                    ))}
+                    {players.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Waiting for players...
+                        </Typography>
+                    ) : (
+                        players.map((p, idx) => (
+                            <Chip key={idx} label={p} color={p === playerName ? 'primary' : 'default'} />
+                        ))
+                    )}
                 </Box>
             </Box>
 

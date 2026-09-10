@@ -207,7 +207,7 @@ export default function App() {
   const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
-  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean; hostParticipates?: boolean } | null>(null);
+  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean; hostParticipates: boolean } | null>(null);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -249,7 +249,6 @@ export default function App() {
     }
   }, []);
 
-  // Sync real-time updates for scores, room status, and live progress
   useEffect(() => {
     if (!activeRoom) return;
 
@@ -298,7 +297,6 @@ export default function App() {
     };
   }, [activeRoom]);
 
-  // Track party wins whenever scores update on final state
   useEffect(() => {
     if (appState === 'finished' && scores.length > 0) {
       const maxScore = Math.max(...scores.map((s) => s.score));
@@ -350,7 +348,8 @@ export default function App() {
               max_players: parsedMaxPlayers,
               language: settings.language,
               difficulty: settings.difficulty,
-              status: 'waiting'
+              status: 'waiting',
+              host_participates: participateHost
             }
           ])
           .select()
@@ -411,12 +410,13 @@ export default function App() {
         difficulty: matchedRoom.difficulty || prev.difficulty
       }));
 
+      const isHostUser = matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase();
       setActiveRoom({
         id: matchedRoom.id,
         code: matchedRoom.room_code,
         pass: matchedRoom.password,
-        isHost: matchedRoom.host_id.trim().toLowerCase() === playerName.trim().toLowerCase(),
-        hostParticipates: true
+        isHost: isHostUser,
+        hostParticipates: matchedRoom.host_participates ?? true
       });
       setAppState('lobby');
     } catch (err) {
@@ -750,6 +750,7 @@ export default function App() {
                   <QuizRoom
                       roomId={activeRoom.id}
                       isHost={activeRoom.isHost}
+                      hostParticipates={activeRoom.hostParticipates}
                       playerName={playerName}
                       onStartQuiz={loadQuestionsAndStart}
                       t={t}
@@ -801,7 +802,6 @@ export default function App() {
                 </>
             )}
 
-            {/* Player status & progress tracking screen */}
             {appState === 'waiting_results' && (
                 <Box sx={{ textAlign: 'center', py: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <CircularProgress size={50} />
@@ -846,7 +846,6 @@ export default function App() {
                 </Box>
             )}
 
-            {/* Final leaderboard & Parties Won score screen */}
             {appState === 'finished' && (
                 <Box sx={{ textAlign: 'center' }}>
                   <EmojiEventsIcon sx={{ fontSize: 60, color: '#fbc02d', mb: 1 }} />
