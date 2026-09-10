@@ -16,7 +16,7 @@ interface QuizRoomProps {
     hostParticipates?: boolean;
     gameMode?: 'regular' | 'tournament';
     onStartQuiz: () => void;
-    onKickPlayer?: (targetPlayerId: string) => void;
+    onKickPlayer?: (targetPlayerId: string, targetPlayerName: string) => void;
     t: {
         joinedPlayers: string;
         launchQuiz: string;
@@ -178,7 +178,7 @@ export function QuizRoom({
                                     variant={isCurrentUser ? 'filled' : 'outlined'}
                                     onDelete={
                                         isHost && gameMode === 'tournament' && !isCurrentUser && onKickPlayer
-                                            ? () => onKickPlayer(p.id)
+                                            ? () => onKickPlayer(p.id, p.name)
                                             : undefined
                                     }
                                     deleteIcon={<CloseIcon />}
