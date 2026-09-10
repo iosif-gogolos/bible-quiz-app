@@ -12,6 +12,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import PersonIcon from '@mui/icons-material/Person';
+import CloseIcon from '@mui/icons-material/Close';
 import type { QuizSettings, Language, Difficulty, Question } from './types';
 import { supabase } from './supabaseClient';
 import { QuizRoom } from './QuizRoom';
@@ -49,6 +50,9 @@ const uiTranslations = {
     joinRoom: 'Σύνδεση σε Δωμάτιο',
     soloMode: 'Μονός Παίκτης',
     multiMode: 'Πολλαπλοί Παίκτες',
+    gameModeLabel: 'Λειτουργία Παιχνιδιού',
+    regularMode: 'Κανονικό',
+    tournamentMode: 'Τουρνουά',
     roomName: 'Όνομα Δωματίου',
     password: 'PIN / Κωδικός',
     maxPlayers: 'Μέγιστος Αριθμός Παικτών',
@@ -84,7 +88,9 @@ const uiTranslations = {
     launchNewQuiz: 'Έναρξη Νέου Κουίζ',
     wins: 'Νίκες',
     hostMonitoring: 'Πρόοδος Παικτών',
-    youBadge: 'Εσύ'
+    youBadge: 'Εσύ',
+    action: 'Ενέργεια',
+    kickedMessage: 'Αφαιρεθήκατε από το δωμάτιο από τον οικοδεσπότη.'
   },
   en: {
     title: 'Bible Quiz',
@@ -97,6 +103,9 @@ const uiTranslations = {
     joinRoom: 'Join Room',
     soloMode: 'Single Player',
     multiMode: 'Multiplayer',
+    gameModeLabel: 'Game Mode',
+    regularMode: 'Regular',
+    tournamentMode: 'Tournament',
     roomName: 'Room Name',
     password: 'PIN / Password',
     maxPlayers: 'Max Players',
@@ -132,7 +141,9 @@ const uiTranslations = {
     launchNewQuiz: 'Launch New Quiz',
     wins: 'Parties Won',
     hostMonitoring: 'Player Progress',
-    youBadge: 'You'
+    youBadge: 'You',
+    action: 'Action',
+    kickedMessage: 'You were removed from the room by the host.'
   },
   de: {
     title: 'Bibel-Quiz',
@@ -145,6 +156,9 @@ const uiTranslations = {
     joinRoom: 'Raum beitreten',
     soloMode: 'Einzelspieler',
     multiMode: 'Mehrspieler',
+    gameModeLabel: 'Spielmodus',
+    regularMode: 'Normal',
+    tournamentMode: 'Turnier',
     roomName: 'Raumname',
     password: 'PIN / Passwort',
     maxPlayers: 'Max. Spieler',
@@ -180,7 +194,9 @@ const uiTranslations = {
     launchNewQuiz: 'Neues Quiz starten',
     wins: 'Gewonnene Spiele',
     hostMonitoring: 'Spielerfortschritt',
-    youBadge: 'Du'
+    youBadge: 'Du',
+    action: 'Aktion',
+    kickedMessage: 'Du wurdest vom Gastgeber aus dem Raum entfernt.'
   }
 };
 
@@ -203,6 +219,7 @@ export default function App() {
   const [playerId] = useState<string>(() => crypto.randomUUID());
   const [appState, setAppState] = useState<'setup' | 'lobby' | 'loading' | 'quiz' | 'waiting_results' | 'finished'>('setup');
   const [playMode, setPlayMode] = useState<'solo' | 'multiplayer'>('solo');
+  const [gameMode, setGameMode] = useState<'regular' | 'tournament'>('regular');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
   const [participateHost, setParticipateHost] = useState(true);
 
@@ -215,7 +232,14 @@ export default function App() {
   const [maxPlayers, setMaxPlayers] = useState<number | string>(5);
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [inputPassword, setInputPassword] = useState('');
-  const [activeRoom, setActiveRoom] = useState<{ id: string; code: string; pass: string; isHost: boolean; hostParticipates: boolean } | null>(null);
+  const [activeRoom, setActiveRoom] = useState<{
+    id: string;
+    code: string;
+    pass: string;
+    isHost: boolean;
+    hostParticipates: boolean;
+    gameMode: 'regular' | 'tournament';
+  } | null>(null);
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -284,6 +308,25 @@ export default function App() {
             });
           }
         })
+        .on('broadcast', { event: 'sync_wins' }, ({ payload }) => {
+          if (payload?.wins) {
+            setPartyWins(payload.wins);
+          }
+        })
+        .on('broadcast', { event: 'kick_player' }, ({ payload }) => {
+          if (payload?.targetPlayerId === playerId) {
+            setActiveRoom(null);
+            setAppState('setup');
+            alert(uiTranslations[settings.language].kickedMessage);
+          } else if (payload?.targetPlayerId) {
+            setPlayerProgress((prev) => {
+              const copy = { ...prev };
+              delete copy[payload.targetPlayerId];
+              return copy;
+            });
+            setScores((prev) => prev.filter((p) => p.id !== payload.targetPlayerId));
+          }
+        })
         .on('broadcast', { event: 'launch_new_quiz' }, () => {
           setAppState('lobby');
         })
@@ -309,10 +352,24 @@ export default function App() {
       supabase.removeChannel(gameChannel);
       supabase.removeChannel(roomChannel);
     };
-  }, [activeRoom]);
+  }, [activeRoom, playerId, settings.language]);
 
   useEffect(() => {
-    if (appState === 'finished' && scores.length > 0) {
+    if (appState !== 'waiting_results' || !activeRoom?.isHost) return;
+
+    const progressList = Object.values(playerProgress);
+    if (progressList.length > 0 && progressList.every((p) => p.status === 'finished')) {
+      supabase
+          .from('room')
+          .update({ status: 'finished' })
+          .eq('id', activeRoom.id)
+          .then();
+    }
+  }, [playerProgress, appState, activeRoom]);
+
+  // Host acts as central source of truth for win tallies and broadcasts to all clients
+  useEffect(() => {
+    if (appState === 'finished' && activeRoom?.isHost && scores.length > 0) {
       const maxScore = Math.max(...scores.map((s) => s.score));
       if (maxScore > 0) {
         const winners = scores.filter((s) => s.score === maxScore).map((s) => s.id);
@@ -321,11 +378,16 @@ export default function App() {
           winners.forEach((wId) => {
             updated[wId] = (updated[wId] || 0) + 1;
           });
+          gameChannelRef.current?.send({
+            type: 'broadcast',
+            event: 'sync_wins',
+            payload: { wins: updated }
+          });
           return updated;
         });
       }
     }
-  }, [appState, scores]);
+  }, [appState, activeRoom, scores]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
@@ -336,6 +398,21 @@ export default function App() {
   const handleSelectLanguage = (lang: Language) => {
     setSettings((prev) => ({ ...prev, language: lang }));
     handleCloseMenu();
+  };
+
+  const handleKickPlayer = async (targetPlayerId: string) => {
+    if (!gameChannelRef.current) return;
+    await gameChannelRef.current.send({
+      type: 'broadcast',
+      event: 'kick_player',
+      payload: { targetPlayerId }
+    });
+    setPlayerProgress((prev) => {
+      const copy = { ...prev };
+      delete copy[targetPlayerId];
+      return copy;
+    });
+    setScores((prev) => prev.filter((p) => p.id !== targetPlayerId));
   };
 
   const handleCreateRoom = async () => {
@@ -362,6 +439,7 @@ export default function App() {
               max_players: parsedMaxPlayers,
               language: settings.language,
               difficulty: settings.difficulty,
+              game_mode: gameMode,
               status: 'waiting',
               host_participates: participateHost
             }
@@ -376,7 +454,8 @@ export default function App() {
         code: generatedRoomName,
         pass: generatedPin,
         isHost: true,
-        hostParticipates: participateHost
+        hostParticipates: participateHost,
+        gameMode
       });
       setAppState('lobby');
     } catch (err) {
@@ -430,7 +509,8 @@ export default function App() {
         code: matchedRoom.room_code,
         pass: matchedRoom.password,
         isHost: isHostUser,
-        hostParticipates: matchedRoom.host_participates ?? true
+        hostParticipates: matchedRoom.host_participates ?? true,
+        gameMode: matchedRoom.game_mode || 'regular'
       });
       setAppState('lobby');
     } catch (err) {
@@ -652,6 +732,17 @@ export default function App() {
                         {multiAction === 'create' ? (
                             <>
                               <FormControl fullWidth>
+                                <FormLabel sx={{ mb: 1 }}>{t.gameModeLabel}</FormLabel>
+                                <Select
+                                    value={gameMode}
+                                    onChange={(e) => setGameMode(e.target.value as 'regular' | 'tournament')}
+                                >
+                                  <MenuItem value="regular">{t.regularMode}</MenuItem>
+                                  <MenuItem value="tournament">{t.tournamentMode}</MenuItem>
+                                </Select>
+                              </FormControl>
+
+                              <FormControl fullWidth>
                                 <FormLabel sx={{ mb: 1 }}>{t.difficultyLabel}</FormLabel>
                                 <Select
                                     value={settings.difficulty}
@@ -766,9 +857,11 @@ export default function App() {
                       roomId={activeRoom.id}
                       isHost={activeRoom.isHost}
                       hostParticipates={activeRoom.hostParticipates}
+                      gameMode={activeRoom.gameMode}
                       playerName={playerName}
                       playerId={playerId}
                       onStartQuiz={loadQuestionsAndStart}
+                      onKickPlayer={handleKickPlayer}
                       t={t}
                   />
                 </Box>
@@ -833,6 +926,9 @@ export default function App() {
                               <TableCell><strong>{t.player}</strong></TableCell>
                               <TableCell align="center"><strong>{t.question}</strong></TableCell>
                               <TableCell align="right"><strong>Status</strong></TableCell>
+                              {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
+                                  <TableCell align="center"><strong>{t.action}</strong></TableCell>
+                              )}
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -856,6 +952,15 @@ export default function App() {
                                           color={p.status === 'finished' ? 'success' : 'warning'}
                                       />
                                     </TableCell>
+                                    {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
+                                        <TableCell align="center">
+                                          {!isCurrentUser && (
+                                              <IconButton size="small" color="error" onClick={() => handleKickPlayer(p.id)}>
+                                                <CloseIcon fontSize="small" />
+                                              </IconButton>
+                                          )}
+                                        </TableCell>
+                                    )}
                                   </TableRow>
                               );
                             })}
@@ -888,6 +993,9 @@ export default function App() {
                               <TableCell><strong>{t.player}</strong></TableCell>
                               <TableCell align="right"><strong>{t.points}</strong></TableCell>
                               <TableCell align="center"><strong>{t.wins}</strong></TableCell>
+                              {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
+                                  <TableCell align="center"><strong>{t.action}</strong></TableCell>
+                              )}
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -911,6 +1019,15 @@ export default function App() {
                                     </TableCell>
                                     <TableCell align="right">{row.score} / {activeQuestions.length}</TableCell>
                                     <TableCell align="center">{partyWins[row.id] || 0}</TableCell>
+                                    {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
+                                        <TableCell align="center">
+                                          {!isCurrentUser && (
+                                              <IconButton size="small" color="error" onClick={() => handleKickPlayer(row.id)}>
+                                                <CloseIcon fontSize="small" />
+                                              </IconButton>
+                                          )}
+                                        </TableCell>
+                                    )}
                                   </TableRow>
                               );
                             })}
