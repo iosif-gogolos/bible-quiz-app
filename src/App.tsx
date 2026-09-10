@@ -6,7 +6,8 @@ import {
   Button, RadioGroup, FormControlLabel, Radio, Box, LinearProgress,
   FormControl, FormLabel, Select, MenuItem, CircularProgress,
   IconButton, Menu, Avatar, TextField, ToggleButton, ToggleButtonGroup, Paper,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Chip
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -90,7 +91,10 @@ const uiTranslations = {
     hostMonitoring: 'Πρόοδος Παικτών',
     youBadge: 'Εσύ',
     action: 'Ενέργεια',
-    kickedMessage: 'Αφαιρεθήκατε από το δωμάτιο από τον οικοδεσπότη.'
+    kickedMessage: 'Αφαιρεθήκατε από το δωμάτιο από τον οικοδεσπότη.',
+    confirmKickTitle: 'Επιβεβαίωση Αφαίρεσης',
+    confirmKickDesc: 'Είστε σίγουροι ότι θέλετε να αφαιρέσετε τον παίκτη',
+    yesRemove: 'Αφαίρεση'
   },
   en: {
     title: 'Bible Quiz',
@@ -143,7 +147,10 @@ const uiTranslations = {
     hostMonitoring: 'Player Progress',
     youBadge: 'You',
     action: 'Action',
-    kickedMessage: 'You were removed from the room by the host.'
+    kickedMessage: 'You were removed from the room by the host.',
+    confirmKickTitle: 'Confirm Removal',
+    confirmKickDesc: 'Are you sure you want to remove player',
+    yesRemove: 'Remove'
   },
   de: {
     title: 'Bibel-Quiz',
@@ -196,7 +203,10 @@ const uiTranslations = {
     hostMonitoring: 'Spielerfortschritt',
     youBadge: 'Du',
     action: 'Aktion',
-    kickedMessage: 'Du wurdest vom Gastgeber aus dem Raum entfernt.'
+    kickedMessage: 'Du wurdest vom Gastgeber aus dem Raum entfernt.',
+    confirmKickTitle: 'Entfernen bestätigen',
+    confirmKickDesc: 'Sind Sie sicher, dass Sie den Spieler entfernen möchten',
+    yesRemove: 'Entfernen'
   }
 };
 
@@ -250,13 +260,14 @@ export default function App() {
   const [scores, setScores] = useState<PlayerScore[]>([]);
   const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerProgress>>({});
   const [partyWins, setPartyWins] = useState<Record<string, number>>({});
+  const [kickTarget, setKickTarget] = useState<{ id: string; name: string } | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const gameChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (playerName) {
-      localStorage.setItem('bible_quiz_player_name', playerName);
+      localStorage.getItem('bible_quiz_player_name');
     }
   }, [playerName]);
 
@@ -316,6 +327,7 @@ export default function App() {
         .on('broadcast', { event: 'kick_player' }, ({ payload }) => {
           if (payload?.targetPlayerId === playerId) {
             setActiveRoom(null);
+            setPartyWins({});
             setAppState('setup');
             alert(uiTranslations[settings.language].kickedMessage);
           } else if (payload?.targetPlayerId) {
@@ -367,7 +379,6 @@ export default function App() {
     }
   }, [playerProgress, appState, activeRoom]);
 
-  // Host acts as central source of truth for win tallies and broadcasts to all clients
   useEffect(() => {
     if (appState === 'finished' && activeRoom?.isHost && scores.length > 0) {
       const maxScore = Math.max(...scores.map((s) => s.score));
@@ -400,19 +411,27 @@ export default function App() {
     handleCloseMenu();
   };
 
-  const handleKickPlayer = async (targetPlayerId: string) => {
-    if (!gameChannelRef.current) return;
+  const handleRequestKick = (targetId: string, targetName: string) => {
+    setKickTarget({ id: targetId, name: targetName });
+  };
+
+  const handleConfirmKick = async () => {
+    if (!kickTarget || !gameChannelRef.current) return;
+    const targetPlayerId = kickTarget.id;
+
     await gameChannelRef.current.send({
       type: 'broadcast',
       event: 'kick_player',
       payload: { targetPlayerId }
     });
+
     setPlayerProgress((prev) => {
       const copy = { ...prev };
       delete copy[targetPlayerId];
       return copy;
     });
     setScores((prev) => prev.filter((p) => p.id !== targetPlayerId));
+    setKickTarget(null);
   };
 
   const handleCreateRoom = async () => {
@@ -423,6 +442,7 @@ export default function App() {
 
     setAppState('loading');
     setError(null);
+    setPartyWins({});
 
     const generatedRoomName = getRandomBiblicalCity(settings.language);
     const generatedPin = generatePin();
@@ -476,6 +496,7 @@ export default function App() {
 
     setAppState('loading');
     setError(null);
+    setPartyWins({});
 
     try {
       const { data, error: dbError } = await supabase
@@ -566,6 +587,7 @@ export default function App() {
   const handleStartSoloQuiz = async () => {
     setAppState('loading');
     setError(null);
+    setPartyWins({});
     await loadQuestionsAndStart();
   };
 
@@ -642,6 +664,7 @@ export default function App() {
 
   const handleLeaveLobby = () => {
     setActiveRoom(null);
+    setPartyWins({});
     setAppState('setup');
     window.history.replaceState({}, document.title, window.location.pathname);
   };
@@ -861,7 +884,7 @@ export default function App() {
                       playerName={playerName}
                       playerId={playerId}
                       onStartQuiz={loadQuestionsAndStart}
-                      onKickPlayer={handleKickPlayer}
+                      onKickPlayer={handleRequestKick}
                       t={t}
                   />
                 </Box>
@@ -955,7 +978,7 @@ export default function App() {
                                     {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
                                         <TableCell align="center">
                                           {!isCurrentUser && (
-                                              <IconButton size="small" color="error" onClick={() => handleKickPlayer(p.id)}>
+                                              <IconButton size="small" color="error" onClick={() => handleRequestKick(p.id, p.name)}>
                                                 <CloseIcon fontSize="small" />
                                               </IconButton>
                                           )}
@@ -1022,7 +1045,7 @@ export default function App() {
                                     {activeRoom?.isHost && activeRoom.gameMode === 'tournament' && (
                                         <TableCell align="center">
                                           {!isCurrentUser && (
-                                              <IconButton size="small" color="error" onClick={() => handleKickPlayer(row.id)}>
+                                              <IconButton size="small" color="error" onClick={() => handleRequestKick(row.id, row.name)}>
                                                 <CloseIcon fontSize="small" />
                                               </IconButton>
                                           )}
@@ -1050,6 +1073,7 @@ export default function App() {
                     <Button
                         onClick={() => {
                           setActiveRoom(null);
+                          setPartyWins({});
                           setAppState('setup');
                         }}
                         sx={{ backgroundColor: '#E8DA4D', color: '#AC2F29', fontWeight: 'bold', '&:hover': { backgroundColor: '#d8c93d' } }}
@@ -1061,6 +1085,26 @@ export default function App() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={Boolean(kickTarget)} onClose={() => setKickTarget(null)}>
+          <DialogTitle>{t.confirmKickTitle}</DialogTitle>
+          <DialogContent>
+            <Typography>
+              {t.confirmKickDesc} <strong>"{kickTarget?.name}"</strong>;
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+                onClick={() => setKickTarget(null)}
+                sx={{ backgroundColor: '#E8DA4D', color: '#AC2F29', '&:hover': { backgroundColor: '#d8c93d' } }}
+            >
+              {t.cancel}
+            </Button>
+            <Button variant="contained" color="error" onClick={handleConfirmKick}>
+              {t.yesRemove}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
   );
 }
